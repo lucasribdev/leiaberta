@@ -61,6 +61,26 @@ npm run build
 
 Os testes SQL cobrem RLS ativa, ausência de campos privados, criação automática, leitura anônima, edição própria, bloqueio de terceiros, throttle, proteção de IDs, escrita negada, jurisdição federal, evidência de status, hash, unicidade de origem e exclusão em cascata. Todos os fixtures são sintéticos e a transação sofre rollback.
 
+### CLI em sandbox com home somente leitura
+
+Em 21/10/2026, o Supabase CLI instalado (`2.121.0`) falhou antes das validações ao tentar gravar `/home/zero/.supabase/telemetry.json.tmp.*`, com `EROFS`. A escrita de estado da telemetria no home é incompatível com este sandbox; não é uma falha de migration ou de RLS.
+
+A menor correção local é desativar a telemetria somente no ambiente dos comandos. O arquivo `.env.supabase.local`, ignorado pela regra `.env.*`, foi criado com `export SUPABASE_TELEMETRY_DISABLED=1`. Ele precisa ser carregado explicitamente; scripts npm não carregam esse arquivo automaticamente:
+
+```bash
+# Se o arquivo local não existir, use diretamente:
+# export SUPABASE_TELEMETRY_DISABLED=1
+. ./.env.supabase.local
+npm run test:db
+npm run lint:db
+```
+
+A variável é uma opção suportada pelo [Supabase CLI para CI e sandboxes](https://github.com/supabase/cli/blob/develop/apps/cli/docs/analytics.md#consent-and-state). Não foi necessário alterar `HOME`, permissões, scripts npm, dependências ou migrations, nem executar `supabase telemetry disable`, que persiste estado global.
+
+Resultados da reexecução neste sandbox: ambos os comandos deixaram de apresentar `EROFS`, mas terminaram com **código 1**, `DbConnectError` / `ECONNREFUSED 127.0.0.1:54322`. A porta coincide com a configuração do banco local. A checagem `docker info` também terminou com código 1, por acesso negado a `/var/run/docker.sock`. Portanto, **os testes de banco e o lint SQL não foram aprovados nem concluídos**. É necessário repeti-los em ambiente com o banco local disponível e Docker acessível ao usuário, mantendo a variável acima. Nenhum serviço foi iniciado nem permissões foram alteradas para contornar o sandbox.
+
+Verificações adicionais: `npm run lint`, `npm run typecheck` e `npm test` passaram (4 testes Node). Esses resultados não substituem as validações do banco.
+
 Não é necessário `supabase db reset` para esta entrega. Esse comando apaga os dados locais. Nenhum `link`, `db push`, reset ou deploy remoto foi executado. A aplicação em ambiente remoto deve ser revisada e autorizada separadamente.
 
 ## Próximas etapas de autenticação

@@ -1,0 +1,245 @@
+# LeiAberta — Análise da ingestão
+
+**Status:** inspeção amostral realizada; propostas de schema e recorte pendentes de aprovação.  
+**Data:** 21/10/2026.  
+**Escopo:** LA-003. Nenhum importador, migration, carga ou alteração de banco foi implementado nesta etapa.
+
+## Fonte inicial e evidências
+
+- Repositório: [ctresb/leis](https://github.com/ctresb/leis), branch `main`, analisada no commit [`15eb09b618ff08a38c4dfee06a91bd139d093f5d`](https://github.com/ctresb/leis/tree/15eb09b618ff08a38c4dfee06a91bd139d093f5d). Os exemplos deste documento usam esse snapshot, não uma promessa sobre o conteúdo futuro da branch.
+- Destino: `public.laws`. A migration [profiles_and_federal_laws](../supabase/migrations/20261021184852_profiles_and_federal_laws.sql), os [tipos gerados](../src/lib/supabase/database.types.ts) e os [testes SQL](../supabase/tests/schema.test.sql) foram examinados. Na inspeção anterior desta tarefa, uma transação somente leitura no Supabase local confirmou 19 colunas, 16 constraints e zero registros em `laws`. O ambiente remoto não foi consultado.
+- Amostra: 39 Markdown de coleções federais e a Constituição na raiz, além do README, licença, árvores de diretórios e scripts de geração/identificação. Os arquivos de pesquisa foram mantidos em `/tmp`, fora do projeto.
+- Limite: as árvores recursivas de `federal/` e `federal/decretos/` retornaram `truncated: true`; as outras subárvores normativas consultadas vieram completas. Não foi feita auditoria integral nem se afirma contagem total, ausência de duplicatas ou qualidade uniforme do acervo.
+- Alinhamento: [PRD](PRD.md), [arquitetura](ARCHITECTURE.md), [regras de negócio](BUSINESS_RULES.md) e [backlog](BACKLOG.md). A arquitetura prevê script TypeScript fora das requisições; o PRD exige consulta real com proveniência e importações que preservem interações. A implementação atual ainda contém a página inicial de scaffold, clientes Supabase e a fundação de schema/RLS, sem importador ou catálogo.
+
+## Respostas às questões da inspeção
+
+### 1. Árvore federal e tipos normativos
+
+O padrão usual é `federal/<coleção>/<AAAA>/<slug>.md`. `federal/regimentos/*.md` não tem pasta de ano; `constituicao.md` fica na raiz. A pasta federal também contém anexos, capturas, relatórios, arquivos `_falhas*.jsonl` e cópias de recuperação. Selecionar todos os Markdown recursivamente importaria material auxiliar como se fossem normas.
+
+| Coleção observada | Tipos e particularidades |
+| --- | --- |
+| `leis-ordinarias` | `Lei Ordinária`, inclusive sem número e com complemento como `14-A`; o gerador também prevê `Lei (não numerada)`. |
+| `leis-complementares` | `Lei Complementar`. |
+| `leis-delegadas` | `Lei Delegada`. |
+| `leis-constitucionais` | `Lei Constitucional`, série histórica própria. |
+| `decretos-lei` | `Decreto-Lei`. |
+| `emendas-constitucionais` | `Emenda Constitucional` e `Emenda Constitucional de Revisão`, com tipos LexML distintos. |
+| `decretos` | `Decreto`, inclusive números com complemento alfabético. |
+| `decretos-nao-numerados` | `Decreto (não numerado)`; pode usar data e sequência do Senado na URN. |
+| `decretos-legislativos` | `Decreto Legislativo` e `Decreto do Poder Legislativo`; há documentos históricos sem número e sem URN. |
+| `medidas-provisorias` | `Medida Provisória`; reedições como `1463-2` têm identidade própria. |
+| `resolucoes-camara` | `Resolução da Câmara dos Deputados`; o nome do arquivo pode incluir ID da Câmara. |
+| `resolucoes-senado` | `Resolução do Senado Federal`; autoridade LexML `senado.federal`. |
+| `resolucoes-congresso` | `Resolução do Congresso Nacional`; o gerador também distingue `Resolução da Revisão Constitucional`, sob autoridade `congresso.nacional`. |
+| `constituicoes-historicas` | `Constituição`, com número vazio e sem URN nas amostras. |
+| `regimentos` | `Regimento Interno`; pode representar resolução encontrada também em outra coleção. |
+| `regulamentos` | Textos por assunto, frequentemente do tipo `Decreto`, potencialmente sobrepostos à coleção de decretos. |
+
+Vocabulário e geração foram conferidos em [baixar_federal.py](https://github.com/ctresb/leis/blob/15eb09b618ff08a38c4dfee06a91bd139d093f5d/scripts/baixar_federal.py), [comum.py](https://github.com/ctresb/leis/blob/15eb09b618ff08a38c4dfee06a91bd139d093f5d/scripts/comum.py) e [baixar_camara.py](https://github.com/ctresb/leis/blob/15eb09b618ff08a38c4dfee06a91bd139d093f5d/scripts/baixar_camara.py).
+
+**Recorte proposto para a primeira carga:** lista explícita das 13 coleções até `resolucoes-congresso`, validando conjuntamente caminho e tipo. Adiar Constituição, constituições históricas, regimentos e regulamentos para adaptadores próprios, registrando a exclusão deliberada no manifesto. Isso é uma recomendação técnica a aprovar, não uma redução já aprovada do escopo do produto.
+
+Não incluir estados, municípios, jurisprudência, tratados ou reguladores nesta etapa. Ignorar como normas autônomas arquivos `_...`, relatórios, anexos e cópias de recuperação. Tipos e coleções novos geram diagnóstico para revisão, sem inclusão automática.
+
+### 2. Formato Markdown/YAML e exemplos reais
+
+O formato usual contém front matter entre `---`, H1 e corpo convertido. Exemplo real simplificado do [Código Civil](https://github.com/ctresb/leis/blob/15eb09b618ff08a38c4dfee06a91bd139d093f5d/federal/leis-ordinarias/2002/lei-10406-2002-01-10.md):
+
+```yaml
+titulo: "Lei nº 10.406 de 10/01/2002"
+tipo: "Lei Ordinária"
+numero: "10406"
+data: 2002-01-10
+ementa: "Institui o Código Civil."
+revogada: false
+versao_texto: "compilada (texto vigente)"
+urn: "urn:lex:br:federal:lei:2002-01-10;10406"
+fonte: "https://normas.leg.br/?urn=urn:lex:br:federal:lei:2002-01-10;10406"
+baixado_em: 2026-10-13
+```
+
+As variações abaixo impedem tratar todo arquivo como o mesmo conjunto de campos obrigatórios:
+
+| Documento fixado no snapshot | Achado e consequência |
+| --- | --- |
+| [Lei sem número de 1822](https://github.com/ctresb/leis/blob/15eb09b618ff08a38c4dfee06a91bd139d093f5d/federal/leis-ordinarias/1822/lei-sn-1822-10-14-s2.md) | `numero: ""`, tipo `Lei Ordinária`, URN terminada em `;seq-sf-2`. A constraint atual rejeita esse registro válido. |
+| [Lei 14-A/1891](https://github.com/ctresb/leis/blob/15eb09b618ff08a38c4dfee06a91bd139d093f5d/federal/leis-ordinarias/1891/lei-14-a-1891-10-16.md) | Número `14-A`, URN com `14-a`. Não converter número em inteiro. |
+| [MP 1463-2/1996](https://github.com/ctresb/leis/blob/15eb09b618ff08a38c4dfee06a91bd139d093f5d/federal/medidas-provisorias/1996/mpv-1463-2-1996-06-28.md) | Situação `Reeditada`, `revogada: false`, URN com reedição. Preservar a reedição e não inferir vigência. |
+| [Decreto do Poder Legislativo de 1821](https://github.com/ctresb/leis/blob/15eb09b618ff08a38c4dfee06a91bd139d093f5d/federal/decretos-legislativos/1821/dpl-sn-1821-05-26.md) | Sem número e sem URN. Precisa de identidade provisória rastreável. |
+| [Decreto 20.051/1945](https://github.com/ctresb/leis/blob/15eb09b618ff08a38c4dfee06a91bd139d093f5d/federal/decretos/1945/dec-20051-1945-11-28.md) | `revogada: null`, `forca_legal_fonte` é string contendo JSON com `NotInForce`; há URL/hash de metadados. Não converter automaticamente em `repealed`. |
+| [Resolução da Câmara 5/1921](https://github.com/ctresb/leis/blob/15eb09b618ff08a38c4dfee06a91bd139d093f5d/federal/resolucoes-camara/1921/rcd-5-1921-11-18-611915.md) | Sem URN, situação `Não consta revogação expressa`, `revogada: false`. Ausência de revogação expressa não comprova vigência. |
+| [Lei Delegada 13/1992](https://github.com/ctresb/leis/blob/15eb09b618ff08a38c4dfee06a91bd139d093f5d/federal/leis-delegadas/1992/ldl-13-1992-08-27.md) | Corpo contém tabela HTML com células mescladas. Markdown não garante ausência de HTML. |
+| [Regimento do Senado](https://github.com/ctresb/leis/blob/15eb09b618ff08a38c4dfee06a91bd139d093f5d/federal/regimentos/regimento-senado.md) | Imagens relativas em `anexos/regimento-senado-2025/`, edição atualizada até julho de 2025 e hash do PDF. Adaptador futuro precisa tratar dependências e edição. |
+| [Constituição na raiz](https://github.com/ctresb/leis/blob/15eb09b618ff08a38c4dfee06a91bd139d093f5d/constituicao.md) | Sem front matter; começa com H1 e nota de origem. Exige adaptador específico. |
+
+As datas aparecem com e sem aspas. `revogada` é triestado: `true`, `false` ou `null`; ausência não equivale a false. Preservar `forca_legal_fonte` como recebido e validar sua representação JSON separadamente quando usada. O gerador também prevê `identidade_pendente_revisao: true`, que deve impedir publicação automática.
+
+Usar parser YAML seguro, sem construtores arbitrários, rejeitando chaves duplicadas e limitando tamanho, profundidade e aliases. Configurar datas como strings e validar com Zod. Não fazer parsing linha a linha por regex nem executar scripts da fonte. Campos desconhecidos ficam preservados nos metadados e geram diagnóstico de mudança do contrato.
+
+### 3. Mapeamento dos campos para `laws`
+
+**Negrito** indica coluna proposta, ainda inexistente. Campos descritos pelo README mas não encontrados nas amostras principais estão identificados explicitamente.
+
+| Origem | Destino | Regra e lacuna |
+| --- | --- | --- |
+| Caminho, `uf` e autoridade da URN | `jurisdiction` | Sempre `federal`; conferir coerência. Ausência de `uf` isoladamente não prova esfera federal. |
+| `tipo` | `law_type` | Preservar rótulo canônico; validar combinação com coleção. Hoje aceita qualquer texto não vazio. |
+| `numero` | `number` | Texto com complemento/reedição; vazio vira NULL na proposta. Hoje NOT NULL e check impedem ausência. Não preencher com `0`, `s/n` ou sequência. |
+| `data` | **`enactment_date`** | Data do ato, distinta da publicação; validar calendário sem conversão de fuso. Ausente no schema. |
+| Ano de `data`, ou `ano` explícito | `year` | Conferir ano da pasta; não usar ano do commit/download. `ano` é previsto no README para fontes que só fornecem ano. Sem ano confiável, quarentena. |
+| `titulo` | `title` | Preservar, conferir presença e H1; não gerar título por IA. |
+| `ementa` | `summary` | Vazio pode virar NULL, com original preservado. |
+| Corpo após front matter | `legislative_text` | Preservar Markdown, H1, notas e avisos. H1 sozinho ou aviso de ausência não é íntegra válida. |
+| `data_publicacao` | `publication_date` | Campo previsto no README; preencher só quando explicitamente informado e válido. Nunca copiar `data`. |
+| `publicacao` | **`publication_reference`** | Referência textual prevista no README; não inferir data de string ambígua. |
+| `versao_texto` | **`text_version`** | Preservar original, compilada, republicação/retificação e variantes. Não é certificado de vigência. |
+| `revogada`, `situacao`, `forca_legal_fonte` | **`source_metadata`** | Alegações da fonte, preservando tipos/valores; não mapeadas automaticamente para vigência do produto. |
+| Evidência oficial verificada | `legal_status`, `status_evidence_url`, **`status_checked_at`** | Carga inicial mantém `unknown`. URL HTTPS sozinha não comprova status. |
+| `urn` | **`source_urn`** e `source_id` inicial | Usar URN validada quando existir; não inventar URN para arquivos sem esse campo. |
+| Identidade provisória sem URN | `source_id` inicial | Namespace do repositório + caminho inicial. Identidade inicial permanece estável se uma URN aparecer depois. |
+| Caminho relativo no Git | `source_path` | Arquivo principal; case preservado e sem `/` inicial. Renomes/aliases exigem histórico separado. |
+| Repositório fixo | `source_repository` | Manter restrição atual a `https://github.com/ctresb/leis`. |
+| Permalink do arquivo | `source_url` | Contrato proposto: `https://github.com/ctresb/leis/blob/<commit>/<path>`. Hoje a coluna só exige HTTPS. |
+| `fonte` | **`official_source_url`** | Separar URL oficial da URL GitHub; hoje existe uma coluna para duas necessidades. |
+| `arquivo`, `fonte_indice`, `id_senado` | **`source_metadata`** | Preservar identificadores e URLs auxiliares; `arquivo` é previsto no README para fonte PDF. |
+| `url_metadados`, `fonte_metadados`, `sha256_metadados_fonte` | **`source_metadata`** | Evidência auxiliar; hash dos metadados oficiais não é hash do Markdown. |
+| `recuperacao_integralidade`, `sha256_md_historico`, `sha256_pdf_fonte`, `atualizado_ate`, `identidade_pendente_revisao` | **`source_metadata`** | Preservar recuperação, edição, hashes e pendências. Hash histórico/PDF nunca substitui `source_hash`. |
+| YAML completo parseado, incluindo chaves novas | **`source_metadata`** | Objeto JSON preservado sem descartar campos. Bytes originais recuperáveis por commit/caminho e preferencialmente arquivados por hash. |
+| `baixado_em` | **`source_downloaded_at`** | Data da coleta realizada pela fonte; diferente da nossa importação. |
+| Commit fixado, blob da árvore Git | **`source_commit_sha`, `source_blob_sha`** | Proveniência e comparação incremental. Não são SHA-256 do arquivo. |
+| Bytes completos do Markdown | `source_hash` | SHA-256 hexadecimal minúsculo, incluindo YAML e quebras de linha, antes de normalizar. |
+| Relógio do importador | `imported_at` | Última versão efetivamente aplicada; replay sem mudança não altera timestamp. |
+| Relógio do banco | `created_at`, `updated_at` | Preservar criação e UUID. Trigger atual muda `updated_at` em qualquer UPDATE; evitar UPDATE sem alteração. |
+
+### 4. Identificadores, duplicidades e renomes
+
+`source_id` e `source_path` únicos não impedem a mesma norma com dois identificadores e caminhos diferentes. Caminhos mudam; URNs podem faltar ou ser corrigidas. Tipo/número/ano também não bastam para todas as séries e apresentações documentais.
+
+1. `laws.id` permanece estável para votos e discussões. Atualizar a linha existente; nunca DELETE + INSERT nem substituir UUID para sincronizar conteúdo.
+2. Preferir URN validada, guardada em `source_urn`. `source_id` inicial permanece imutável quando uma identidade provisória ganhar URN; procurar por URN e histórico de caminhos antes de inserir.
+3. Número completo, data, tipo, autoridade e IDs oficiais ajudam a identificar candidatos. Não criar UNIQUE apenas em número/ano ou tipo/número/ano. Preservar `-A`, `-2` e `seq-sf-*`; resoluções de Casas distintas não devem colidir.
+4. Mesma URN com arquivos distintos exige comparação de versão/conteúdo; divergência vai para revisão, sem regra de “último arquivo vence”. Número/data semelhantes ou URL oficial parecida geram candidato, não fusão automática.
+5. Regimentos/regulamentos podem apresentar o mesmo ato de outras coleções. Sua inclusão futura exige equivalência verificada, documentos associados à mesma lei e seleção explícita do principal.
+6. Renome com URN ou blob conhecido conserva UUID e registra caminhos anterior/novo. Renome com conteúdo alterado e identidade inconclusiva vai para revisão. Caminho antigo reutilizado por outra norma não autoriza sobrescrita.
+7. Remoção no Git não é revogação. Preservar lei e interações, registrar indisponibilidade da origem e não trocar o status jurídico automaticamente.
+
+### 5. Codificação, conteúdo e vigência
+
+Os 40 documentos amostrados decodificaram como UTF-8 estrito, sem BOM ou U+FFFD. Isso não garante o restante do corpus: conversores da fonte têm fallback de charset, incluindo CP1252, e caminhos que substituem caracteres. UTF-8 válido pode conter corrupção já introduzida na conversão.
+
+Calcular hash sobre bytes originais. Aceitar BOM/CRLF apenas na interpretação, sem mudar o material auditado. Rejeitar UTF-8 inválido e NUL; sinalizar U+FFFD, mojibake e controles inesperados para revisão. Não corrigir silenciosamente acentos, ordinais, referências ou grafia histórica: `vaccum`, `sôbre` e `Approva` não demonstram erro de codificação. Normalização Unicode/acentos para busca deve ser derivada.
+
+Preservar tachados, tabelas e notas. Renderizar inicialmente como texto escapado, conforme o contrato atual. Uma visualização futura de Markdown precisa desativar HTML bruto ou convertê-lo para estruturas sanitizadas; nunca inserir HTML da fonte diretamente. Não apagar tabelas para resolver segurança. Links/imagens relativos precisam de resolução contra caminho/commit fixos e regras contra traversal e esquemas perigosos. Não buscar URLs arbitrárias do YAML pelo servidor.
+
+O repositório é uma conversão secundária de fontes oficiais, sujeita a falhas de OCR, integralidade e atualização. `revogada: false`, `Não consta revogação expressa`, `Reeditada` e a palavra `compilada` não autorizam `in_force`. `NotInForce` não informa sozinho a causa e não deve virar automaticamente `repealed`.
+
+Para afirmar status, verificar evidência oficial específica e registrar URL, instante, conteúdo/hash e decisão ou regra responsável. Uma mudança relevante na fonte exige revalidar a evidência anterior. A UI deve separar texto, avisos da conversão e opiniões; mostrar origem, edição e sincronização, sem confundir sincronização com alteração legal. As URLs oficiais dos exemplos foram lidas no YAML; não foi certificada individualmente sua disponibilidade ou a vigência das normas.
+
+### 6. Licença e avisos de origem
+
+A [LICENSE do snapshot](https://github.com/ctresb/leis/blob/15eb09b618ff08a38c4dfee06a91bd139d093f5d/LICENSE) foi consultada diretamente. Ela aplica MIT ao código em `scripts/`, com atribuição a João Davi, e distingue os textos normativos, descritos pelo próprio repositório como atos oficiais sob o art. 8º, I, da Lei nº 9.610/98. Essa é a declaração da fonte; não se deve rotular todo o material indistintamente como software MIT.
+
+Se código dos scripts for copiado ou adaptado futuramente, preservar os avisos de copyright e licença exigidos. O plano atual é um parser próprio em TypeScript; não exige executar nem incorporar os scripts Python. Preservar proveniência e avisos sobre conversão automática, OCR, ausência de texto e consulta à publicação oficial. Não apresentar a conversão como publicação oficial ou certificação de integralidade/vigência.
+
+## Incompatibilidades e schema recomendado para aprovação
+
+As lacunas principais são: número obrigatório incompatível com atos sem número; ausência da data do ato e da versão textual; uma só URL para arquivo GitHub e fonte oficial; ausência de metadados/commit/blob/coleta; e falta de controle persistente de execuções, falhas e renomes.
+
+### Alterações propostas em `laws`
+
+| Alteração | Tipo e restrição propostos |
+| --- | --- |
+| `number` aceita ausência | Remover NOT NULL; check `number IS NULL OR length(btrim(number)) > 0`. Converter vazios para NULL; nenhuma sentinela. |
+| `enactment_date` | `date NULL`; quando presente, ano deve coincidir com `year`. Não criar dia/mês fictícios. Manter `year` obrigatório e faixa atual; sem ano confiável, quarentena. |
+| `publication_reference` | `text NULL`, referência literal à publicação. |
+| `text_version` | `text NULL`, não vazio quando preenchido; validação de vocabulário no parser, sem enum rígido que descarte variantes. |
+| `official_source_url` | `text NULL` na transição, obrigatório no contrato de novas entradas aceitas. Validar HTTPS/host oficial no processo confiável; divergências ficam no bruto para revisão. |
+| `source_urn` | `text NULL`, validação de formato e UNIQUE parcial quando preenchida; conflito impede sobrescrita. |
+| `source_metadata` | `jsonb NOT NULL DEFAULT '{}'::jsonb`, check de objeto. |
+| `source_downloaded_at` | `date NULL`. |
+| `source_commit_sha`, `source_blob_sha` | `text NULL` na transição, formato Git hexadecimal de 40 caracteres observado nesta fonte; novas ingestões exigem ambos. |
+| `status_checked_at` | `timestamptz NULL`; status diferente de `unknown` exige instante e URL, além da verificação confiável. |
+| `source_removed_at` | `timestamptz NULL`; indisponibilidade do documento principal, sem semântica de revogação. |
+
+Manter constraints de jurisdição federal, repositório, SHA-256 e unicidade de `source_id`/`source_path`. Documentar `source_url` como permalink GitHub com commit. Não flexibilizar a exigência de texto para publicar documentos incompletos: esses ficam em quarentena.
+
+### Controle de ingestão proposto
+
+- `ingestion_runs`: UUID, repositório, commit-base/alvo, versão do parser, hash da configuração/recorte, modo (`full`, `incremental`, `reprocess`), início/fim, estado e contadores. Lock por repositório impede avanço de checkpoints fora de ordem.
+- `ingestion_items`: execução, caminho, operação Git, blob SHA, SHA-256 quando disponível, lei opcional, resultado, código/mensagem de erro, tentativas, próximo retry, timestamps e referência aos bytes originais. UNIQUE `(run_id, source_path)`, com histórico de tentativas preservado. Guardar snapshot dos metadados/evidências da versão aplicada para auditoria. Incluir exclusões deliberadas e falhas sem correspondente em `laws`.
+- `law_source_paths`: lei, repositório, caminho, commits de primeira/última observação, início/fim de validade e indicação do principal. UNIQUE parcial de repositório/caminho ativo e, no máximo, um principal ativo por lei. `laws.source_path` continua representando o principal e é atualizado na mesma transação. Aliases dependem de equivalência verificada.
+
+Tabelas operacionais sem leitura pública, com RLS e grants restritos. Preferir papel de ingestão dedicado com SELECT/INSERT/UPDATE somente no necessário, sem DELETE em leis, DDL ou acesso a usuários/perfis. Chave privilegiada, se necessária, fica apenas no ambiente isolado do job, nunca em `VITE_*`, bundle ou cliente SSR de usuários.
+
+**Pacote para aprovação:** recorte inicial de 13 coleções; NULL para números ausentes; colunas e tabelas propostas; `source_url` como permalink; carga inicial com `unknown`. Só após aprovação preparar nova migration incremental, testes e regeneração de tipos. Não editar migrations aplicadas nem presumir banco remoto vazio; backfills exigem evidência. Não copiar indiscriminadamente `source_url` para `official_source_url`, pois o contrato anterior não distingue os usos.
+
+## Pipeline proposto para implementação posterior
+
+1. **Snapshot e dry-run.** Script TypeScript separado do runtime web, como prevê a arquitetura. Resolver `main` uma vez para commit imutável; registrar parser e recorte. Primeiro gerar inventário, duplicidades e erros sem gravar leis. Não executar código da fonte.
+2. **Inventário completo.** Percorrer subárvores/anos, detectando truncamento/paginação, ou usar checkout isolado somente leitura. Não carregar todo o histórico legislativo para a primeira carga. Recusar symlinks, submódulos e caminhos fora do recorte. Snapshot parcial nunca autoriza inferência de remoção.
+3. **Aquisição.** Baixar blobs do commit-alvo com limites de tamanho, tempo e concorrência. Respeitar rate limits e `Retry-After`; não contornar bloqueios. A carga inicial não precisa raspar novamente as fontes oficiais nem buscar URLs arbitrárias do YAML.
+4. **Validação e staging.** Hash dos bytes, UTF-8 estrito, YAML seguro, Zod, datas, tipo/pasta/URN e presença de texto. Aviso de documento vazio, H1 sozinho ou identidade pendente vai para quarentena; OCR/integralidade exigem diagnóstico conforme severidade.
+5. **Identidade e transação.** Resolver identidade antes de gravar. Transacionar lei, caminhos e resultado aplicado; rollback em falha. Não registrar sucesso sem a mudança correspondente nem alterar UUIDs usados por interações.
+6. **Idempotência.** Inserir apenas identidade nova. Atualizar só quando hash, parser/configuração ou projeção validada mudar. Replay idêntico conserva conteúdo e timestamps de `laws`; execuções continuam auditáveis nas tabelas operacionais.
+7. **Delta incremental.** Comparar árvores por caminho/blob SHA desde o último checkpoint reconciliado; buscar adições/alterações e tratar renomes/remoções. Git diff é alternativa com histórico disponível. Data de commit, `baixado_em`, ano da norma e mtime não são cursores: o histórico inicial representa datas legislativas, coletas posteriores entram em lote e normas antigas recebem correções.
+8. **Retomada.** Avançar checkpoint só com inventário completo e resultado durável para cada caminho. `completed_with_errors` só permite avanço se as falhas entrarem em fila persistente independente do delta seguinte; caso contrário, manter checkpoint anterior. Reprocessar pendências mesmo com blob inalterado. Interrupção não pode perder falhas nem duplicar leis.
+9. **Remoções.** Encerrar associação do caminho removido, preservar lei/interações e marcar indisponibilidade do principal sem substituto aprovado. Nunca apagar automaticamente ou transformar remoção Git em revogação. Trocar principal só após validação.
+10. **Reconciliação.** Recontar por coleção, conferir hashes e repetir pendências periodicamente. Histórico reescrito ou compare incompleto exige comparação completa de árvores. Parser/recorte novo exige reprocessamento versionado de blobs iguais. Arquivar bytes por hash permite auditoria mesmo se o histórico remoto desaparecer.
+
+## Tratamento de erros e observabilidade
+
+| Classe | Conduta |
+| --- | --- |
+| Timeout, 429 e 5xx | Retry limitado com backoff/jitter e `Retry-After`; persistir falha após esgotamento. |
+| 401/403 ou limite de API | Pausar/reduzir execução e registrar diagnóstico, sem contornar bloqueios ou logar tokens. |
+| Blob esperado com 404, download incompleto, árvore truncada | Falha de aquisição; não tratar como remoção nem finalizar inventário parcial. |
+| UTF-8/YAML inválido, chave duplicada, data impossível ou campo obrigatório ausente | Quarentena com caminho, commit, hashes disponíveis, motivo e bytes preservados. |
+| Colisão ou divergência de identidade, tipo, data ou epígrafe | Revisão; não fundir nem sobrescrever versão válida. |
+| Ausência de texto ou dependência necessária | `missing_text`/`incomplete_document`; não publicar como íntegra. |
+| Tipo/coleção novos | Diagnóstico de contrato e revisão do recorte, sem aceitação silenciosa. |
+| Falha SQL, constraint ou perda de lock | Rollback da unidade, erro durável e retomada. |
+
+Relatório deve reconciliar inventariados com inseridos, atualizados, inalterados, excluídos do recorte, removidos e falhos. Cada erro precisa de registro por documento, não só contador. `_falhas*.jsonl` da fonte descrevem lacunas anteriores à nossa coleta, não novas leis disponíveis. Falha em atualização conserva a última versão válida e sinaliza sincronização pendente.
+
+Definir retenção/acesso de logs e artefatos; não versionar material operacional no Git da aplicação nem registrar segredos ou dados de usuários. Separar avisos de qualidade de erros impeditivos e tornar ambos visíveis no relatório.
+
+## Testes necessários
+
+| Área | Casos e resultados esperados |
+| --- | --- |
+| YAML e Zod | Datas com/sem aspas, BOM/CRLF, null/boolean, JSON dentro de string, campos desconhecidos, chave duplicada, truncamento e aliases excessivos. Erros rastreáveis, sem execução de código. |
+| Codificação | Acentos, ordinais, `§`, NBSP, travessão, UTF-8 inválido, U+FFFD e mojibake. Hash dos bytes originais; nenhuma correção silenciosa. |
+| Escopo | Coleções aprovadas aceitas; estados/municípios, `_...`, cópias e anexos excluídos explicitamente. Divergências pasta/tipo/autoridade detectadas. |
+| Datas e números | Data do ato distinta de publicação, ano isolado, datas impossíveis/futuras para revisão, vazio, `14-A`, `25170-A`, `1463-2` e `seq-sf-*`; sem sentinelas ou colisões. |
+| Identidade | Replay, URN repetida em dois caminhos, URN adicionada/corrigida, renome com/sem alteração, caminho reutilizado, Casas distintas e reedições. UUID estável ou quarentena. |
+| Idempotência | Duas execuções iguais preservam contagem, UUID, conteúdo e timestamps; alteração em um arquivo afeta apenas a projeção correspondente. Mudança de parser provoca reprocessamento controlado. |
+| Incremental e retomada | Adição, correção antiga, renome, remoção, histórico reescrito, truncamento, falhas fora do próximo delta, interrupção antes/depois da transação e concorrência. Sem perda de erros/checkpoints indevidos. |
+| Texto e segurança | H1 vazio, aviso sem texto, OCR, tachados, HTML, tabelas e links/imagens relativos ou perigosos. Conteúdo preservado e nada executável no browser. |
+| Vigência | False/null, `Reeditada`, ausência de revogação expressa, `NotInForce` e compilado não promovem status sem evidência verificada. Remoção Git não revoga. |
+| Banco e permissões | Constraints propostas, caminhos/principal ativos únicos, escrita negada a anon/authenticated, logs não públicos, privilégio mínimo do job e rollback. |
+
+Fixtures públicas pequenas fixadas por commit/hash e fixtures sintéticas malformadas; testes determinísticos sem rede. Verificação opcional da fonte viva separada. Os testes existentes não comprovam idempotência de um importador ainda inexistente. Manter os testes de votos, permissões e profundidade exigidos pelo AGENTS.md quando essas funcionalidades forem implementadas.
+
+## Restrições preservadas
+
+- Não executar ingestão pesada em requisições Cloudflare Workers.
+- Nunca colocar chave privilegiada em `VITE_*` ou no bundle do cliente.
+- Não alterar status de vigência sem evidência verificável.
+- Não remover automaticamente normas ausentes de snapshot.
+- Não modificar migrations remotas sem revisão e autorização.
+- Propostas/opiniões não alteram o texto oficial; atualização preserva os IDs usados por interações.
+
+## Critérios de aceite da análise (LA-003)
+
+| Critério do roteiro | Evidência neste documento |
+| --- | --- |
+| Pelo menos três exemplos reais e variações | Nove exemplos vinculados ao commit na seção de Markdown/YAML, além do Código Civil. |
+| Mapeamento campo a campo | Tabela de origem/destino, distinguindo campos observados dos previstos no README. |
+| IDs, hashes, atualizações e falhas | Regras de identidade, pipeline incremental e tratamento de erros. |
+| Incompatibilidades com schema atual | Número obrigatório, datas, versões, URLs, metadados, controle de execuções e renomes. |
+| Recomendação de migration sem aplicação | Propostas explícitas de colunas, constraints e tabelas, pendentes de aprovação. |
+| Licença e cobertura | LICENSE consultada e limites de amostragem/truncamento declarados. |
+
+Esta análise não conclui LA-004 (migration/testes), LA-005 (importador) ou LA-001 (auditoria completa da fundação), nem altera o status das issues no backlog. Próximo passo: aprovar o pacote de schema/recorte e preparar a migration e fixtures em etapa separada; depois implementar o pipeline e revisar seu dry-run antes de autorizar a primeira carga.
