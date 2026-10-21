@@ -1,8 +1,66 @@
 # LeiAberta — Análise da ingestão
 
-**Status:** inspeção amostral realizada; propostas de schema e recorte pendentes de aprovação.  
+**Status:** análise LA-003 preservada abaixo; fundação de schema LA-004 implementada e validada localmente (ver seção a seguir).
 **Data:** 21/10/2026.  
-**Escopo:** LA-003. Nenhum importador, migration, carga ou alteração de banco foi implementado nesta etapa.
+**Escopo:** LA-003 (análise histórica) e LA-004 (schema incremental). Nenhum importador ou carga real implementado; nenhum acesso ao Supabase remoto.
+
+## LA-004 — Contrato implementado em 21/10/2026
+
+A [migration incremental](../supabase/migrations/20261021210000_ingestion_foundation.sql) acrescenta a fundação de ingestão sem editar as duas migrations anteriores. As seções LA-003 abaixo registram a análise original: quando chamam o schema de “proposto” ou “inexistente”, referem-se ao estado anterior à LA-004. O recorte de coleções continua proposta para o futuro importador, não é implementado por esta migration.
+
+### Projeção pública e compatibilidade
+
+- `number` aceita NULL; strings vazias ou só espaços continuam inválidas. O adaptador futuro converterá número vazio para NULL, sem sentinelas; complementos e reedições continuam texto.
+- Acrescentados `enactment_date`, `publication_reference`, `text_version`, `official_source_url`, `source_urn`, `source_metadata`, `source_downloaded_at`, `source_commit_sha`, `source_blob_sha`, `status_checked_at` e `source_removed_at`.
+- `source_url` identifica o arquivo GitHub. Quando há snapshot, deve corresponder exatamente a `source_repository/blob/<commit>/<source_path>`. `official_source_url` recebe a fonte oficial declarada, validada separadamente pelo futuro adaptador. Nenhuma URL antiga é copiada ou reinterpretada automaticamente.
+- Commit/blob Git são hexadecimais minúsculos de 40 caracteres, presentes em par. `source_hash` continua SHA-256 dos bytes completos (64 caracteres). `source_metadata` é objeto JSON, incluindo chaves desconhecidas e alegações como `revogada`/`forca_legal_fonte`; o original exato será recuperável por snapshot e artefato arquivado, não pelo JSON parseado.
+- Campos de proveniência novos permanecem NULL/objeto vazio para registros legados, sem inventar hashes, URNs, datas ou evidências. O papel de ingestão exige commit/blob em toda inserção/atualização; portanto, atualizar um legado exige antes resolver sua proveniência real.
+- Status continua `unknown` por padrão. O papel de ingestão não pode inserir nem atualizar status, URL de evidência ou data de verificação. Qualquer futura verificação jurídica requer processo confiável separado. Para novas escritas administrativas, status afirmado exige URL HTTPS e `status_checked_at`; a constraint de data é `NOT VALID` para preservar eventuais afirmações legadas até revisão com evidência. Não há backfill nem inferência automática de vigência.
+- Trigger bloqueia alteração de `id`, `source_id` e `created_at`, inclusive em UPDATE administrativo. Não há DELETE para o papel de ingestão. Os tipos públicos foram regenerados pelo CLI a partir do banco local; o schema operacional fica fora dos tipos consumidos pelos clientes web.
+
+### Identidade estável, conflitos e renomes
+
+1. Para nova norma, usar URN validada como `source_id` inicial quando disponível. Caso contrário usar namespace `ctresb/leis:path:<caminho-inicial>`; nunca somente tipo/número/ano. A identidade inicial é imutável, mesmo quando uma URN for descoberta depois.
+2. Resolver primeiro `source_urn`, `source_id` e histórico de caminhos. URN é única quando presente; colisão rejeita a escrita. Ausência de URN não é erro. Uma correção de URN exige revisão, não trocar `source_id`. Não há fusão automática baseada em número, data, URL ou hash de conteúdo.
+3. `laws.source_path` permanece principal e único. `ingestion_private.law_source_paths` guarda histórico com commits inicial/final e abertura/encerramento. Índices permitem um dono por caminho ativo e um principal ativo por lei. Renome validado encerra o vínculo anterior e abre o novo na **mesma transação** da atualização da lei, conservando UUID. Registrar `previous_path` no item. Nenhum histórico legado é fabricado.
+4. URN/blob conhecidos são candidatos a renome, não prova suficiente para fusão. Renome com conteúdo alterado e identidade inconclusiva, caminhos reutilizados ou URN repetida com conteúdo divergente geram item `conflict` para revisão; conservar a versão pública válida. Caminhos encerrados continuam reservados como evidência histórica; reutilização exige decisão explícita. Exclusão no Git registra indisponibilidade e encerra vínculo, sem apagar a lei ou mudar vigência.
+5. Usar INSERT apenas para identidade realmente nova; UPDATE por UUID resolvido ou `ON CONFLICT (source_id) DO UPDATE` com lista explícita de colunas permitidas. Não usar DELETE+INSERT ou upsert genérico de todas as colunas. Replay compara hash **e versão do parser/configuração/projeção** antes de escrever: sem mudança, não executar UPDATE, preservando também `imported_at`/`updated_at`. Os testes verificam o padrão de replay por hash, não um pipeline completo.
+
+### Controle operacional privado
+
+O schema `ingestion_private` não é exposto pela configuração da API. Suas quatro tabelas têm RLS, sem políticas para clientes, e sem privilégios de schema/tabela para PUBLIC, `anon`, `authenticated` ou `service_role`:
+
+| Estrutura | Contrato |
+| --- | --- |
+| `runs` | Repositório, base/alvo, parser/configuração, modo, estado, inventário, contadores e início/fim; índice impede duas execuções `running` no mesmo repositório. Estado completo exige inventário completo e fim. |
+| `items` | Uma linha imutável por tentativa `(run_id, source_path, attempt)`, operação, hashes, lei opcional, metadados, artefato, resultado, diagnóstico e retry. Falhas e conflitos exigem código/mensagem e podem existir sem lei publicada. Runner não recebe UPDATE/DELETE. |
+| `checkpoints` | Um cursor por repositório; FK vincula execução/repositório/commit-alvo. Trigger exige execução completa, inventário completo e nenhuma falha/conflito sem tentativa posterior resolvida. Atualização exige base igual ao checkpoint anterior. |
+| `law_source_paths` | Histórico privado de caminhos e principal; unicidade parcial e FK impedem colisões ativas e exclusão de lei referenciada. |
+
+A decisão conservadora desta entrega é **não avançar checkpoint com falhas pendentes**. Não existe estado `completed_with_errors`. Registrar o erro/diagnóstico é obrigatório mesmo quando nada é publicado. Próxima tentativa deve preservar as anteriores, incrementando `attempt`.
+
+### Privilégio mínimo e responsabilidades da LA-005
+
+`law_ingestor` é NOLOGIN, sem superuser, criação de banco/papéis ou BYPASSRLS. Não possui DELETE/TRUNCATE/DDL, acesso a usuários/perfis ou permissão para alterar identidade/vigência das leis. Recebe SELECT e INSERT/UPDATE por coluna em `laws`; SELECT/INSERT/UPDATE no controle de execução/checkpoint/caminhos; apenas SELECT/INSERT em itens. Funções de trigger têm `search_path` vazio e execução pública revogada, sem SECURITY DEFINER.
+
+Não foram criados login, senha, membership da API nem segredo. O operador deverá provisionar separadamente uma identidade exclusiva de servidor, com autorização revisada, que assuma somente esse papel por conexão PostgreSQL direta. Nunca usar `service_role` como credencial do importador ou conceder o papel a `authenticator`, `anon` ou `authenticated`. O administrador que cria o papel pode ter ADMIN OPTION para administrá-lo; a migration não concede SET ROLE à aplicação. Testes concedem SET ROLE ao usuário local `postgres` e USAGE da extensão pgTAP **dentro da transação revertida**, sem persistir esses acessos.
+
+O banco limita permissões, formatos e colisões, mas não decide identidade semântica, autoridade de uma URL ou completude real do inventário. LA-005 deve: validar caminhos relativos e URLs, normalizar/validar URN e YAML com Zod, selecionar equivalências, transacionar lei+caminhos+item, manter correspondência entre principal e `laws.source_path`, serializar execução/checkpoint e usar compare-and-swap do cursor. O runner é confiável para essas decisões; os contadores, estados e histórico de caminhos são graváveis por ele. Validar concorrência/retomada, integridade dos artefatos e retenção de diagnósticos nessa etapa. Não há importador, RPC de importação ou chamadas externas implementados aqui.
+
+### Validação local e aceite
+
+Acesso ao Docker local foi necessário para os comandos Supabase. Com `SUPABASE_TELEMETRY_DISABLED=1`:
+
+- `npx supabase migration up --local`: passou; somente a migration nova foi aplicada, sem reset ou carga.
+- `npm run db:types`: passou; tipos gerados do schema `public`, mantendo estruturas privadas fora da API tipada.
+- `npm run test:db`: passou, **97 verificações** em dois arquivos (73 novas e 24 anteriores); fixtures sintéticos e permissões de teste revertidos por ROLLBACK. As primeiras tentativas identificaram falta de SET ROLE e de USAGE do schema pgTAP no próprio harness, corrigidas somente na transação de teste.
+- `npx supabase db lint --local --schema public,ingestion_private --fail-on warning`: passou, sem erros.
+- `npm run lint`, `npm run typecheck` e `npm test`: passaram (4 testes Node).
+- `npm run build`: terminou com código 0 e gerou bundles cliente/SSR. Emitiu erro de gravação de log do Wrangler em home somente leitura (`EROFS`) e aviso de sourcemap CSS; não impediram a compilação. Não houve deploy.
+
+Os [testes pgTAP](../supabase/tests/ingestion.test.sql) verificam número ausente/complementos, metadados, snapshot/permalink, UUID e identidade imutáveis, replay sem duplicação, renome/histórico, colisões, vigência e remoção Git, permissões reais por SET ROLE, falhas duráveis e bloqueios de checkpoint. Os 24 testes anteriores permanecem presentes. Não comprovam idempotência de importador, votos ou discussões ainda inexistentes.
+
+Os nove requisitos de LA-004 têm implementação de schema, regras operacionais documentadas e cobertura SQL. Restam revisão de legados antes de validar a constraint de status, provisionamento seguro do runner e implementação/testes end-to-end da LA-005. Não executar aplicação remota sem revisão e autorização. Nenhum reset, push, deploy ou operação Supabase remota foi executado.
 
 ## Fonte inicial e evidências
 
@@ -242,4 +300,4 @@ Fixtures públicas pequenas fixadas por commit/hash e fixtures sintéticas malfo
 | Recomendação de migration sem aplicação | Propostas explícitas de colunas, constraints e tabelas, pendentes de aprovação. |
 | Licença e cobertura | LICENSE consultada e limites de amostragem/truncamento declarados. |
 
-Esta análise não conclui LA-004 (migration/testes), LA-005 (importador) ou LA-001 (auditoria completa da fundação), nem altera o status das issues no backlog. Próximo passo: aprovar o pacote de schema/recorte e preparar a migration e fixtures em etapa separada; depois implementar o pipeline e revisar seu dry-run antes de autorizar a primeira carga.
+Conclusão histórica da LA-003: a análise isolada não concluía LA-004, LA-005 ou LA-001. A implementação e a validação posteriores da LA-004 estão registradas no início deste documento. LA-005 e a auditoria completa da fundação continuam fora desta entrega; revisar o recorte e o dry-run antes de autorizar a primeira carga. O backlog não foi alterado.
