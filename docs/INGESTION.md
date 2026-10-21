@@ -1,8 +1,70 @@
 # LeiAberta — Análise da ingestão
 
-**Status:** LA-005 validada também com amostra real limitada (15 documentos, 13 coleções), exclusivamente em dry-run; validações históricas LA-003/004/005 preservadas abaixo.
+**Status:** LA-005 preparada para tentativa integral limitada, aguardando aprovação de aquisição. Compatibilidade real demonstrada apenas para os 15 documentos históricos; evidências anteriores preservadas abaixo.
 **Data:** 21/10/2026.  
 **Escopo:** LA-005 (importador local), LA-004 (schema incremental) e LA-003 (análise histórica). Nenhuma carga real ou acesso ao Supabase remoto.
+
+## LA-005 — Preparação do primeiro dry-run integral (21/10/2026)
+
+**Estado desta etapa:** somente preparação e verificação local. Nenhuma aquisição integral foi iniciada, nenhum Supabase foi acessado e nenhum checkpoint avançou. Resultados integrais, consumo real, investigação de rejeições e recomendação definitiva sobre carga dependem da aprovação e da execução posterior. Não interpretar esta seção como aprovação da primeira carga.
+
+### Inspeção e controles novos
+
+O caminho integral anterior tinha fetch superficial em bare temporário e prazo de 30 s por comando, mas não orçamento de disco, memória do coordenador, bytes totais processados, duração total ou relatório. Até 300.000 documentos de 2 MiB não constitui um dimensionamento viável do conjunto: o runner guardava também os textos aprovados em memória, além dos metadados de todos os itens. Identificação de duplicatas e cópias faz buscas lineares repetidas; o custo pode crescer quadraticamente. Não se fez refatoração desse algoritmo nesta etapa.
+
+O comando dedicado `scripts/dry-run-laws.ts` não aceita argumentos, não importa a implementação de banco e chama `ingest` sem banco, arquivo de artefatos ou retomada. `runner.ts` também bloqueia essas opções quando há orçamento operacional. O CLI anterior agora recusa dry-run integral sem esse comando; a amostra e os caminhos de escrita preexistentes permanecem separados. Os controles novos são específicos desta tentativa dry-run e **não certificam os limites do modo de escrita**.
+
+O comando mantém `PARSER_VERSION`, `CONFIG_HASH`, regras de identidade e allowlist das 13 coleções. O orçamento operacional fica separado da configuração semântica, preservando a comparação com `docs/ingestion-sample-report.json`. No dry-run limitado por orçamento, o catálogo prospectivo mantém identidades e proveniência, liberando texto e metadados das projeções aprovadas; os metadados continuam nos itens do relatório. Isso reduz retenção sem alterar a classificação de duplicatas.
+
+### Comando reproduzível, somente após aprovação
+
+Pré-requisitos: Linux com `/proc` legível, Node.js 24+, Git e dependências já instaladas. Na raiz do projeto:
+
+```bash
+npm run ingest:full:dry-run
+```
+
+Executa `node --max-old-space-size=512 scripts/dry-run-laws.ts`. Commit fixo no código: **`15eb09b618ff08a38c4dfee06a91bd139d093f5d`**. Não resolve `main` novamente. O único fetch usa `--depth=1 --no-tags`, sem checkout; o SHA resolvido deve coincidir com o fixado. Inventaria o snapshot Git inteiro e classifica exclusões; só lê/valida como normas os caminhos das 13 coleções aprovadas. **O pack pode adquirir também anexos e outros blobs fora do recorte**. Não executa código da fonte, hooks ou submódulos e não acessa URLs do YAML. Não lê `.env` nem usa credenciais PostgreSQL.
+
+O diretório `.ingestion/full-dry-run-15eb09b/` deve estar ausente. A criação exclusiva impede sobrescrever evidência de uma tentativa anterior; não há retry ou retomada automáticos. Uma nova tentativa após interrupção exige preservar os relatórios existentes e revisar sua causa, nunca aumentar limites silenciosamente.
+
+### Limites efetivos da tentativa
+
+| Recurso | Controle aplicado |
+| --- | --- |
+| Aquisição | Um fetch, até **5 minutos**; demais comandos Git, **30 s** cada; sem retries. O total inclui aquisição. |
+| Duração total | **2 horas**, verificação periódica e entre itens. Interrupção pode aguardar o parser em curso (até 5 s), a drenagem do processo Git e limpeza local. |
+| Disco da fonte | Limiar observado de **1 GiB** no bare temporário em `os.tmpdir()`; remoção no encerramento tratado, inclusive falha de aquisição. |
+| Espaço livre prévio | Pelo menos **2 GiB** no filesystem temporário e **128 MiB** no dos relatórios. Verificação inicial, sem reserva exclusiva. |
+| Memória | Heap V8 principal de **512 MiB**; limiar observado de **768 MiB RSS**, somando Node (inclui workers) e árvore de processos Git via `/proc`. |
+| Monitor | A cada **100 ms**, sem medições periódicas sobrepostas. Falha de observação interrompe. Disco/RSS são **limiares amostrados**, não quotas rígidas: há overshoot possível durante o intervalo, varredura e atrasos do event loop. O tamanho lógico dos arquivos é medido, não blocos alocados nem tráfego recebido. |
+| Bytes de processamento | Até **2 GiB de tamanhos declarados** reservados antes de ler blobs elegíveis; tamanho/hash real conferidos pelo snapshot. Tentativa de leitura que falhe também consome a reserva. Não é medição de tráfego Git descomprimido. |
+| Documento/parser | **2 MiB**, YAML profundidade 20, zero aliases, **5 s** por worker; heap old **64 MiB**, young **16 MiB**, stack **4 MiB**. Concorrência 1. |
+| Inventário | Até **300.000 entradas**, saída stdout/stderr Git limitada individualmente a **96 MiB** por comando. Excesso ou saída incompleta falha sem certificar inventário. |
+| Relatório | Até **64 MiB** de itens NDJSON serializados (incluindo newline), conferidos antes de retenção/escrita. Resumo separado limitado a **1 MiB**, contendo somente contadores, códigos e métricas; não duplica itens. |
+
+O monitor encerra o grupo de processos Git com SIGKILL em excesso/cancelamento/prazo; SIGINT/SIGTERM do coordenador solicitam encerramento tratado. Erros operacionais interrompem a execução com código não zero e conservam o prefixo reportado, sem convertê-los em rejeições de conteúdo. Rejeições de documentos e conflitos de identidade são registrados por item, e o processamento continua enquanto houver orçamento. Qualquer rejeição/conflito impede `completed: true` e produz saída não zero. Uma falha do SO, SIGKILL externo ou OOM fatal não permite prometer limpeza ou resumo final; o resumo inicial continua explicitamente incompleto. Não há quota rígida de disco/RSS ou bytes de rede; se isso for requisito operacional, usar isolamento com quotas do SO antes da tentativa, sem tratar este monitor como equivalente.
+
+### Relatórios, completude e reconciliação
+
+- `.ingestion/full-dry-run-15eb09b/items.ndjson`: um objeto por item, contendo caminho, blob, hash quando adquirido, resultado, metadados/warnings ou diagnóstico. Escrita sequencial, até 64 MiB; sem corpus de textos ou credenciais.
+- `.ingestion/full-dry-run-15eb09b/summary.json`: criado como incompleto **antes da aquisição** e substituído por rename local após a finalização tratada. Guarda commit, `dryRun`, `completed`, `inventoryComplete`, checkpoint falso, contadores, `processed`, `reportedItems`, `unprocessed`, coleções ausentes, classificação de erros por código, limites e métricas observadas. Também há resumo em stdout e limites em stderr.
+
+Diretório privado (0700) e arquivos (0600), já cobertos pelo `.gitignore`. `reportBytes` é a reserva dos itens serializados, não o tamanho do resumo. `peakDiskBytes`/`peakRssBytes` são máximos **observados**, não máximos absolutos. Bytes Git recebidos, pico entre amostras e CPU não são medidos. O heap V8 é um teto rígido desse heap, não da memória total do processo.
+
+A amostra permanece `inventoryComplete: false`. O inventário integral só é reconhecido após saída Git válida e validação de todas as entradas; interrupção operacional força o relatório final a incompleto. `inventoryComplete: true` descreve apenas inventário, nunca aprovação do parsing, vigência ou completude jurídica. `completed: true` exige execução terminada, zero falhas/conflitos, presença das 13 coleções, contadores reconciliados e todos os itens escritos. Falha de aquisição ou truncamento nunca pode ser interpretada como ausência de leis ou base para remoções.
+
+Reconciliar `processed = inserted + updated + unchanged + excluded + removed + failed + conflict`; em execução integral terminada, exigir também `processed = reportedItems = inventoried` e `unprocessed = 0`. Em interrupção, `inventoried - processed` representa o restante conhecido; se o inventário não terminou, a quantidade restante é desconhecida. `inserted` continua prospectivo sobre catálogo vazio: não demonstra comportamento com base persistida.
+
+Após aprovação: conferir esses contadores, distribuição nas 13 coleções, exclusões e `causes`; examinar bytes originais de exemplos de cada causa, distinguindo falha operacional, fonte incompleta/corrompida, conflito e possível validação excessiva. Nenhuma regra será relaxada apenas para reduzir rejeições. Incompatibilidades comprovadas exigem regressão determinística; toda fixture pública nova deve incluir caminho, commit e SHA-256 dos bytes originais no manifesto. Nenhuma fixture pública nova foi necessária na preparação.
+
+### Consumo esperado, verificações novas e pendências
+
+Não há medição integral nova de tamanho do pack, total de normas/bytes, duração ou pico de memória. Os **923.352 bytes em 15 documentos** são evidência histórica de seleção intencional e não permitem extrapolação confiável. Os limiares acima limitam a tentativa; não são previsão de consumo nem garantia de conclusão. O fetch de 5 minutos, 1 GiB temporário, relatório de 64 MiB ou prazo total de 2 horas podem ser insuficientes. A criação de um worker e um processo Git por documento e as buscas repetidas são incertezas de duração. A inspeção local encontrou aproximadamente 842 GiB livres no filesystem compartilhado do projeto e `/tmp`; isso é observação pontual, não reserva nem consumo do corpus.
+
+Verificações novas: `npm run lint`, `npm run typecheck` e `npm test`; a suíte inclui sete testes de orçamento (bytes/prazo, disco/RSS, prefixo interrompido, teto de relatório e bloqueio de banco, inventário/saída, cancelamento de grupo Git e equivalência de classificação/conflitos). Mantidas as fixtures reais existentes e a comparação byte a byte do JSON da amostra histórica. Testes normais usam snapshots sintéticos, Git temporário local, HTTP mockado e fixtures locais; os testes de clientes Supabase usam mocks e não abrem conexão. Os comandos de CLI inválidos também foram conferidos sem aquisição. Não foram executados testes SQL/integração com banco, build, Supabase CLI, migrations, reset, push, deploy ou alterações de permissões externas. As evidências SQL/build nas seções seguintes são históricas e não foram revalidadas nesta etapa.
+
+**Recomendação atual:** não autorizar ainda a primeira carga. Primeiro obter aprovação para esta tentativa limitada, executar apenas dry-run, investigar rejeições e atualizar esta seção com resultados e consumo realmente observados. Completude integral, compatibilidade fora da amostra, escala, falhas reais de rede/disco e comportamento com base persistida permanecem pendentes. Nenhuma implementação de LA-006.
 
 ## LA-005 — Validação real limitada antes da primeira carga (21/10/2026)
 
@@ -58,7 +120,7 @@ URN validada é usada como identidade inicial; sem URN, o código usa `ctresb/le
 
 Executados nesta validação: `npm run lint`, `npm run typecheck` e `npm test` (inclui os testes de ingestão). As fixtures públicas e os mocks HTTP tornam a suíte normal determinística e independente da rede. A repetição local do dry-run dos 15 documentos produz relatório idêntico. Os testes bloqueiam escrita em snapshot amostral antes de acessar o banco. Nenhum teste de banco, migration, reset, push, deploy, criação de credenciais ou alteração de permissões foi executado nesta etapa; os resultados de integração SQL descritos abaixo são históricos.
 
-**Recomendação:** a amostra aprova a compatibilidade desses 15 documentos com o parser atual; não aprova automaticamente a primeira carga integral. Antes da carga, planejar separadamente o inventário completo e seu dry-run revisado, dimensionar tempo/disco/memória e quota Git, investigar todas as rejeições/conflitos encontrados e confirmar as condições operacionais de escrita já documentadas. O fetch integral original permanece sem quota total de disco e não foi exercitado aqui. Não usar `--sample-path` como base de checkpoint ou prova de ausência/remoção.
+**Recomendação:** a amostra aprova a compatibilidade desses 15 documentos com o parser atual; não aprova automaticamente a primeira carga integral. Antes da carga, planejar separadamente o inventário completo e seu dry-run revisado, dimensionar tempo/disco/memória e quota Git, investigar todas as rejeições/conflitos encontrados e confirmar as condições operacionais de escrita já documentadas. Naquela validação, o fetch integral original permanecia sem quota total de disco e não foi exercitado; os controles novos estão na seção de preparação integral acima. Não usar `--sample-path` como base de checkpoint ou prova de ausência/remoção.
 
 Continuam pendentes: cobertura do restante do corpus e variantes como emenda de revisão, metadados desconhecidos reais, documentos malformados reais, colisões/renomes entre documentos fora da seleção, comportamento com base persistida, escala e falhas reais de rede/disco/interrupção. A API pública pode impor rate limit; não há autenticação nova nem fallback para clone integral. Não se verificaram publicações oficiais, integralidade jurídica, disponibilidade das URLs declaradas ou vigência, nem se implementou LA-006.
 
@@ -71,10 +133,10 @@ Implementação em `scripts/import-laws.ts` e `scripts/ingestion/`, sem imports 
 ```bash
 npm ci
 npm run ingest -- --help
-# Padrão: inventaria/valida, imprime JSON, não abre conexão PostgreSQL.
-npm run ingest -- --ref COMMIT --dry-run
-# Também é dry-run quando --dry-run é omitido.
-npm run ingest -- --ref COMMIT
+# Integral: comando com orçamento e commit fixo, somente após aprovação.
+npm run ingest:full:dry-run
+# O CLI anterior recusa dry-run integral sem orçamento.
+# Para amostra, usar --sample-path conforme seção específica.
 
 # Escrita: somente Supabase local. Executar apenas depois de revisar o dry-run.
 # INGESTION_DATABASE_URL deve ser injetada pelo ambiente seguro do operador;

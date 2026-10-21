@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import type { Budget } from "./budget.ts";
 import { parseLawBounded } from "./bounded-parser.ts";
 import type { Database, Item, Law, Run } from "./database.ts";
 import {
@@ -35,6 +36,8 @@ export interface Report {
 }
 export interface Options {
 	db?: Database;
+	budget?: Budget;
+	onInterrupted?: (report: Report) => void;
 	resume?: string;
 	parserVersion?: string;
 	configHash?: string;
@@ -87,7 +90,13 @@ export async function ingest(
 	snapshot: Snapshot,
 	options: Options = {},
 ): Promise<Report> {
-	const { db } = options;
+	const { db, budget } = options;
+	if (budget && (db || options.archive || options.resume))
+		throw new IngestionError(
+			"bounded_dry_run_only",
+			"Orçamento integral exige dry-run sem banco",
+		);
+	budget?.assert();
 	if (
 		snapshot.inventoryComplete === false &&
 		(db || options.resume || options.archive)
@@ -143,7 +152,13 @@ export async function ingest(
 		try {
 			entries = await snapshot.inventory(snapshot.commit);
 			validInventory(entries);
-		} catch {
+		} catch (error) {
+			budget?.assert();
+			if (budget && error instanceof IngestionError)
+				throw new IngestionError(
+					error.code,
+					`Inventário incompleto: ${error.message}`,
+				);
 			if (db && run) {
 				await db.record(run.id, {
 					source_path: "@inventory",
@@ -230,6 +245,7 @@ export async function ingest(
 				});
 		report.inventoried = tasks.length;
 		for (const entry of tasks) {
+			budget?.assert();
 			const previous = done.get(entry.path);
 			if (
 				previous &&
@@ -299,6 +315,8 @@ export async function ingest(
 						item.artifact_reference = `sha256:${law.source_hash}`;
 						item.source_metadata = latest;
 					} else {
+						if (entry.size <= LIMITS.fileBytes)
+							budget?.consume("readBytes", entry.size);
 						const bytes = await snapshot.read(entry);
 						item.source_hash = sha256(bytes);
 						if (options.archive)
@@ -426,6 +444,10 @@ export async function ingest(
 									source_id: law?.source_id ?? String(provenance.source_id),
 								} as Law;
 							const index = laws.findIndex((l) => l.id === saved.id);
+							if (budget) {
+								// Dry-run needs identity fields, never the corpus text/metadata in memory.
+								saved = { ...saved, legislative_text: "", source_metadata: {} };
+							}
 							if (index < 0) laws.push(saved);
 							else laws[index] = saved;
 							if (db) item.law_id = saved.id;
@@ -434,6 +456,7 @@ export async function ingest(
 					}
 				}
 			} catch (error) {
+				budget?.assert();
 				if (item.law_id && !laws.some((l) => l.id === item.law_id))
 					delete item.law_id;
 				const code =
@@ -446,9 +469,14 @@ export async function ingest(
 						: "Falha de aquisição, artefato ou transação; versão pública preservada";
 			}
 			if (db && run && !recorded) await db.record(run.id, item);
+			budget?.consume(
+				"reportBytes",
+				Buffer.byteLength(JSON.stringify(item)) + 1,
+			);
 			report.items.push(item);
 			await options.afterItem?.(item);
 		}
+		budget?.assert();
 		for (const item of report.items) report[item.outcome]++;
 		if (report.items.length !== report.inventoried)
 			throw new IngestionError(
@@ -466,6 +494,11 @@ export async function ingest(
 		}
 		return report;
 	} catch (error) {
+		if (budget) {
+			report.inventoryComplete = false;
+			for (const item of report.items) report[item.outcome]++;
+			options.onInterrupted?.(report);
+		}
 		failure = error;
 		if (db && run)
 			await db.client

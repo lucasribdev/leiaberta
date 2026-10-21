@@ -41,6 +41,11 @@ async function main(): Promise<void> {
 		throw new IngestionError("arguments", "Retomada exige --write e UUID");
 	if (values.write && !values.artifacts)
 		throw new IngestionError("arguments", "Escrita exige --artifacts");
+	if (!values["sample-path"] && !values.write)
+		throw new IngestionError(
+			"bounded_command_required",
+			"Dry-run integral exige npm run ingest:full:dry-run (commit e limites fixados)",
+		);
 	// Validate local credentials before acquiring any source. Dry-run never opens a DB connection.
 	const db = values.write
 		? await Database.connect(process.env.INGESTION_DATABASE_URL)

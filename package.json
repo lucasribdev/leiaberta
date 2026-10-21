@@ -22,7 +22,8 @@
     "test:db": "supabase test db",
     "lint:db": "supabase db lint --local --schema public,ingestion_private --fail-on warning",
     "ingest": "node scripts/import-laws.ts",
-    "test:ingestion": "node tests/ingestion/parser.test.ts && node tests/ingestion/git.test.ts && node tests/ingestion/sample.test.ts && node tests/ingestion/public.test.ts",
+    "ingest:full:dry-run": "node --max-old-space-size=512 scripts/dry-run-laws.ts",
+    "test:ingestion": "node tests/ingestion/parser.test.ts && node tests/ingestion/git.test.ts && node tests/ingestion/budget.test.ts && node tests/ingestion/sample.test.ts && node tests/ingestion/public.test.ts",
     "test:ingestion:db": "node scripts/test-ingestion-db.mjs"
   },
   "dependencies": {
