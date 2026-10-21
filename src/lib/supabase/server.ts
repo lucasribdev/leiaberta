@@ -1,14 +1,19 @@
 import { createServerClient } from "@supabase/ssr";
+import { createServerOnlyFn } from "@tanstack/react-start";
 import {
 	getCookies,
 	setCookie,
 	setResponseHeader,
 } from "@tanstack/react-start/server";
+import type { Database } from "./database.types";
+import { getSupabaseEnv } from "./env.ts";
 
-export function createClient() {
-	return createServerClient(
-		process.env.VITE_SUPABASE_URL!,
-		process.env.VITE_SUPABASE_PUBLISHABLE_KEY!,
+// A fresh client per request prevents session and cache-header leakage.
+export const createClient = createServerOnlyFn(() => {
+	const env = getSupabaseEnv();
+	return createServerClient<Database>(
+		env.VITE_SUPABASE_URL,
+		env.VITE_SUPABASE_PUBLISHABLE_KEY,
 		{
 			cookies: {
 				getAll() {
@@ -29,4 +34,4 @@ export function createClient() {
 			},
 		},
 	);
-}
+});

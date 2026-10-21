@@ -1,5 +1,9 @@
 Welcome to your new TanStack Start app!
 
+## Supabase — LeiAberta
+
+Consulte [docs/SUPABASE.md](docs/SUPABASE.md) para configurar o ambiente, usar os clientes SSR/browser, entender as políticas RLS e validar migrations, tipos e testes.
+
 # Getting Started
 
 To run this application:
@@ -50,7 +54,7 @@ This project uses the Cloudflare Vite plugin (configured in `vite.config.ts`) an
 2. Authenticate: `wrangler login`
 3. Deploy: `npx wrangler deploy`
 
-For production env vars, run `wrangler secret put MY_VAR` for each secret listed in `.env.example`. Public (non-secret) vars go in `wrangler.jsonc` under `vars`.
+As variáveis `VITE_SUPABASE_*` de `.env.example` são públicas e precisam estar disponíveis durante o build. Nunca use chaves Supabase secret/service-role nessas variáveis. Consulte [a configuração Supabase](docs/SUPABASE.md) antes de gerar o build para outro ambiente.
 
 KV, D1, R2, and Durable Object bindings are configured in `wrangler.jsonc` — see https://developers.cloudflare.com/workers/wrangler/configuration/.
 

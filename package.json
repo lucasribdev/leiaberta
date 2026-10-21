@@ -13,7 +13,14 @@
     "format": "biome format",
     "lint": "biome lint",
     "check": "biome check",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "npm run build && wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-test-module-mocks tests/supabase-env.test.ts && node --experimental-test-module-mocks tests/supabase-clients.test.ts",
+    "supabase:start": "supabase start",
+    "db:migrate": "supabase migration up --local",
+    "db:types": "node scripts/generate-supabase-types.mjs",
+    "test:db": "supabase test db",
+    "lint:db": "supabase db lint --local --schema public --fail-on warning"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
