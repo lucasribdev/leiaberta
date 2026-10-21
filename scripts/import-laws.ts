@@ -1,12 +1,14 @@
 import { parseArgs } from "node:util";
 import { Database } from "./ingestion/database.ts";
 import { acquire } from "./ingestion/git.ts";
-import { IngestionError } from "./ingestion/model.ts";
+import { IngestionError, type Snapshot } from "./ingestion/model.ts";
 import { archiveTo, ingest } from "./ingestion/runner.ts";
+import { acquireSample } from "./ingestion/sample.ts";
 
 async function main(): Promise<void> {
 	const { values } = parseArgs({
 		options: {
+			"sample-path": { type: "string", multiple: true },
 			ref: { type: "string", default: "main" },
 			write: { type: "boolean", default: false },
 			"dry-run": { type: "boolean", default: false },
@@ -18,10 +20,18 @@ async function main(): Promise<void> {
 	});
 	if (values.help) {
 		console.log(
-			"npm run ingest -- [--ref main|COMMIT] [--dry-run]\nEscrita local: --write --artifacts DIRETORIO [--resume UUID]; INGESTION_DATABASE_URL deve permitir SET ROLE law_ingestor.",
+			"npm run ingest -- [--ref main|COMMIT] [--dry-run] [--sample-path CAMINHO (até 20)]\nEscrita local: --write --artifacts DIRETORIO [--resume UUID]; INGESTION_DATABASE_URL deve permitir SET ROLE law_ingestor.",
 		);
 		return;
 	}
+	if (
+		values["sample-path"] &&
+		(values.write || values.resume || values.artifacts)
+	)
+		throw new IngestionError(
+			"sample_dry_run_only",
+			"Amostragem exige dry-run sem escrita, retomada ou artefatos",
+		);
 	if (values.write && values["dry-run"])
 		throw new IngestionError("arguments", "Escolha dry-run ou escrita");
 	if (
@@ -35,9 +45,19 @@ async function main(): Promise<void> {
 	const db = values.write
 		? await Database.connect(process.env.INGESTION_DATABASE_URL)
 		: undefined;
-	let source: Awaited<ReturnType<typeof acquire>> | undefined;
+	let source:
+		| {
+				snapshot: Snapshot;
+				dispose(): Promise<void>;
+		  }
+		| undefined;
 	try {
-		source = await acquire(values.ref);
+		source = values["sample-path"]
+			? {
+					snapshot: await acquireSample(values.ref, values["sample-path"]),
+					async dispose() {},
+				}
+			: await acquire(values.ref);
 		const report = await ingest(source.snapshot, {
 			db,
 			resume: values.resume,

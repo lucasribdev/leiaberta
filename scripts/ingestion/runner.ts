@@ -88,6 +88,14 @@ export async function ingest(
 	options: Options = {},
 ): Promise<Report> {
 	const { db } = options;
+	if (
+		snapshot.inventoryComplete === false &&
+		(db || options.resume || options.archive)
+	)
+		throw new IngestionError(
+			"sample_dry_run_only",
+			"Amostragem permite somente dry-run sem banco, retomada ou artefatos",
+		);
 	if (db && !options.archive)
 		throw new IngestionError(
 			"archive_required",
@@ -151,7 +159,7 @@ export async function ingest(
 				"Inventário não concluído; checkpoint preservado",
 			);
 		}
-		report.inventoryComplete = true;
+		report.inventoryComplete = snapshot.inventoryComplete !== false;
 		const pending = (await db?.pending()) ?? [];
 		if (db && run) {
 			const previous = (await db.items(run.id)).find(

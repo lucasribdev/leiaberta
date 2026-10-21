@@ -1,0 +1,407 @@
+{
+  "commit": "15eb09b618ff08a38c4dfee06a91bd139d093f5d",
+  "base": null,
+  "dryRun": true,
+  "inventoryComplete": false,
+  "checkpointAdvanced": false,
+  "inventoried": 15,
+  "inserted": 15,
+  "updated": 0,
+  "unchanged": 0,
+  "excluded": 0,
+  "removed": 0,
+  "failed": 0,
+  "conflict": 0,
+  "items": [
+    {
+      "source_path": "federal/leis-ordinarias/2002/lei-10406-2002-01-10.md",
+      "blob_sha": "ec3525c73379fa7b7de3c9e0876357c7aaef5180",
+      "operation": "add",
+      "outcome": "inserted",
+      "source_hash": "be0cd7d8a1eaacb21cb64f07086929db91f43ad3149b3c721cd33873d328c32c",
+      "source_metadata": {
+        "parserVersion": "la005-v1",
+        "configHash": "a51c727b7719b184d009d72c2625652d974831067a71b38f7189d206ef9b3bda",
+        "projectionHash": "019bec634cb69fa339532deec70e0a9bbd9dd53793a8372d8f20fedc7d1804fb",
+        "metadata": {
+          "titulo": "Lei nº 10.406 de 10/01/2002",
+          "tipo": "Lei Ordinária",
+          "numero": "10406",
+          "data": "2002-01-10",
+          "ementa": "Institui o Código Civil.",
+          "revogada": false,
+          "versao_texto": "compilada (texto vigente)",
+          "urn": "urn:lex:br:federal:lei:2002-01-10;10406",
+          "fonte": "https://normas.leg.br/?urn=urn:lex:br:federal:lei:2002-01-10;10406",
+          "baixado_em": "2026-10-13"
+        },
+        "warnings": []
+      }
+    },
+    {
+      "source_path": "federal/leis-ordinarias/1822/lei-sn-1822-10-14-s2.md",
+      "blob_sha": "aab2125936a83ef34e03d705da8d1b2df1385fd2",
+      "operation": "add",
+      "outcome": "inserted",
+      "source_hash": "dfce6a25280068d8d1a80d9df22f285b785d760446a3b1f0b3ba65514c1bff86",
+      "source_metadata": {
+        "parserVersion": "la005-v1",
+        "configHash": "a51c727b7719b184d009d72c2625652d974831067a71b38f7189d206ef9b3bda",
+        "projectionHash": "0a27de22fcc934c3eb8fb08e1047936f5c8c78bcb390c759538ca1e4736480af",
+        "metadata": {
+          "titulo": "Lei  de 14/10/1822 ( seq-sf: 2 )",
+          "tipo": "Lei Ordinária",
+          "numero": "",
+          "data": "1822-10-14",
+          "ementa": "COMBINA O RESPEITO DEVIDO A CASA DO CIDADÃO COM A ADMINISTRAÇÃO DA JUSTIÇA.",
+          "revogada": false,
+          "versao_texto": "original",
+          "urn": "urn:lex:br:federal:lei:1822-10-14;seq-sf-2",
+          "fonte": "https://normas.leg.br/?urn=urn:lex:br:federal:lei:1822-10-14;seq-sf-2",
+          "baixado_em": "2026-10-13"
+        },
+        "warnings": []
+      }
+    },
+    {
+      "source_path": "federal/leis-ordinarias/1891/lei-14-a-1891-10-16.md",
+      "blob_sha": "07d40476ae268b7071d4e0fa6d42f41793844118",
+      "operation": "add",
+      "outcome": "inserted",
+      "source_hash": "fc57fc891d045b663c26680861a9ce7dcf2c731e34831b4e6cabdfc1255871f1",
+      "source_metadata": {
+        "parserVersion": "la005-v1",
+        "configHash": "a51c727b7719b184d009d72c2625652d974831067a71b38f7189d206ef9b3bda",
+        "projectionHash": "83d084d03af087e9565b5b0ab47bb28a116a3cc4ef986ec353525652b0b0a860",
+        "metadata": {
+          "titulo": "Lei nº 14-A de 16/10/1891",
+          "tipo": "Lei Ordinária",
+          "numero": "14-A",
+          "data": "1891-10-16",
+          "ementa": "Approva o accordo feito entre o Brazil e o Perú sobre a   execução de cartas rogatórias.",
+          "revogada": false,
+          "versao_texto": "original",
+          "urn": "urn:lex:br:federal:lei:1891-10-16;14-a",
+          "fonte": "https://normas.leg.br/?urn=urn:lex:br:federal:lei:1891-10-16;14-a",
+          "baixado_em": "2026-10-13"
+        },
+        "warnings": []
+      }
+    },
+    {
+      "source_path": "federal/medidas-provisorias/1996/mpv-1463-2-1996-06-28.md",
+      "blob_sha": "e2b11bad5af92fd0fb25c165e4b49f5cef4103d5",
+      "operation": "add",
+      "outcome": "inserted",
+      "source_hash": "4e880e0e68d97863cdd8fdcbfe222b7b6cf28af0f82719b059bff8ad1201b82d",
+      "source_metadata": {
+        "parserVersion": "la005-v1",
+        "configHash": "a51c727b7719b184d009d72c2625652d974831067a71b38f7189d206ef9b3bda",
+        "projectionHash": "66187bdad0d360611581c4bb7f132541f68c2f588c0244fc1119c3e20e8d8bf3",
+        "metadata": {
+          "titulo": "Medida Provisória nº 1.463-2, de 28 de Junho de 1996",
+          "tipo": "Medida Provisória",
+          "numero": "1463-2",
+          "data": "1996-06-28",
+          "ementa": "Dispõe sobre o reajuste do salário mínimo e dos benefícios da Previdência Social, altera alíquotas de contribuição para Seguridade Social e institui contribuição para os servidores inativos da União.",
+          "situacao": "Reeditada",
+          "revogada": false,
+          "versao_texto": "original",
+          "fonte": "https://www2.camara.leg.br/legin/fed/medpro/1996/medidaprovisoria-1463-2-28-junho-1996-362304-publicacaooriginal-1-pe.html",
+          "url_metadados": "https://www2.camara.leg.br/legin/fed/medpro/1996/medidaprovisoria-1463-2-28-junho-1996-362304-norma-pe.html",
+          "baixado_em": "2026-10-15",
+          "urn": "urn:lex:br:federal:medida.provisoria:1996-06-28;1463-2"
+        },
+        "warnings": []
+      }
+    },
+    {
+      "source_path": "federal/decretos-legislativos/1821/dpl-sn-1821-05-26.md",
+      "blob_sha": "dd99c01168a0f89bb3a43d356efbb4abf1168e18",
+      "operation": "add",
+      "outcome": "inserted",
+      "source_hash": "4820ebc56f195a701d3d4f14adb860b72bc5c206a06b3a0ab9d80da1d370bebf",
+      "source_metadata": {
+        "parserVersion": "la005-v1",
+        "configHash": "a51c727b7719b184d009d72c2625652d974831067a71b38f7189d206ef9b3bda",
+        "projectionHash": "caa54a0d5f0c632c225daf3ae1a638c8fad8cabd284e1ba4bcc6cbff4a36ebaf",
+        "metadata": {
+          "titulo": "Decreto de 26.5.1821",
+          "tipo": "Decreto do Poder Legislativo",
+          "numero": "",
+          "data": "1821-05-26",
+          "ementa": "Extingue os privilégios da aposentadoria assim ativa, como passiva fora dos casos que são declarados.",
+          "revogada": false,
+          "versao_texto": "texto histórico da fonte oficial",
+          "fonte": "https://www.planalto.gov.br/ccivil_03/decreto/historicos/dpl/DPL-26-5-1821.htm",
+          "fonte_indice": "https://www.planalto.gov.br/ccivil_03/decreto/historicos/dpl/_dpl-ano.htm",
+          "baixado_em": "2026-10-15"
+        },
+        "warnings": []
+      }
+    },
+    {
+      "source_path": "federal/decretos/1945/dec-20051-1945-11-28.md",
+      "blob_sha": "cf4adeec9c5f10dd840fdf2efa5f7baa9c7ff6e9",
+      "operation": "add",
+      "outcome": "inserted",
+      "source_hash": "4f0edb6825829c7efa0dcaddaa0fac2fe6b38c2def46c2ebda303be59833e63d",
+      "source_metadata": {
+        "parserVersion": "la005-v1",
+        "configHash": "a51c727b7719b184d009d72c2625652d974831067a71b38f7189d206ef9b3bda",
+        "projectionHash": "e9a5b20c2e183cc37def2ac3021951f08648faa42844d5ad74bad4e82b88cdef",
+        "metadata": {
+          "titulo": "Decreto nº 20.051 de 28/11/1945",
+          "tipo": "Decreto",
+          "numero": "20051",
+          "data": "1945-11-28",
+          "ementa": "SUPRIME CARGOS EXTINTOS.",
+          "revogada": null,
+          "forca_legal_fonte": "[\"NotInForce\"]",
+          "fonte_metadados": "https://normas.leg.br/api/public/normas?urn=urn:lex:br:federal:decreto:1945-11-28;20051&tipo_documento=maior-detalhe",
+          "sha256_metadados_fonte": "6f00ba573c7075ab02a3bb0ca28b0a841a446fda7dac0b7f94be88791c723707",
+          "versao_texto": "original",
+          "urn": "urn:lex:br:federal:decreto:1945-11-28;20051",
+          "fonte": "https://normas.leg.br/?urn=urn:lex:br:federal:decreto:1945-11-28;20051",
+          "baixado_em": "2026-10-20"
+        },
+        "warnings": []
+      }
+    },
+    {
+      "source_path": "federal/resolucoes-camara/1921/rcd-5-1921-11-18-611915.md",
+      "blob_sha": "95204a833abffff043789dbf4ab17fd81aeee7bd",
+      "operation": "add",
+      "outcome": "inserted",
+      "source_hash": "512c2dc94dcfb90e5a563bc33335eab13678a3da2ad15baf6937b0fccd543304",
+      "source_metadata": {
+        "parserVersion": "la005-v1",
+        "configHash": "a51c727b7719b184d009d72c2625652d974831067a71b38f7189d206ef9b3bda",
+        "projectionHash": "86351b30e67163799bbd83ad63f8f1967ed764bb323ff0f871706ad12d9052af",
+        "metadata": {
+          "titulo": "Resolução da Câmara dos Deputados nº 5, de 1921",
+          "tipo": "Resolução da Câmara dos Deputados",
+          "numero": "5",
+          "data": "1921-11-18",
+          "ementa": "Modifica o quadro do pessoal da Secretaria da Camara dos Deputados, e dá outras providencias.",
+          "situacao": "Não consta revogação expressa",
+          "revogada": false,
+          "versao_texto": "original",
+          "fonte": "https://www2.camara.leg.br/legin/fed/rescad/1920-1929/resolucaodacamaradosdeputados-5-18-novembro-1921-611915-publicacaooriginal-134443-pl.html",
+          "url_metadados": "https://www2.camara.leg.br/legin/fed/rescad/1920-1929/resolucaodacamaradosdeputados-5-18-novembro-1921-611915-norma-pl.html",
+          "baixado_em": "2026-10-15"
+        },
+        "warnings": []
+      }
+    },
+    {
+      "source_path": "federal/leis-delegadas/1992/ldl-13-1992-08-27.md",
+      "blob_sha": "820b59309b8e731b0781ee05089dc2e8f4712561",
+      "operation": "add",
+      "outcome": "inserted",
+      "source_hash": "3966320f676c3fcdfd03da64906cc046b5c258a77641091fb39008147e38fbed",
+      "source_metadata": {
+        "parserVersion": "la005-v1",
+        "configHash": "a51c727b7719b184d009d72c2625652d974831067a71b38f7189d206ef9b3bda",
+        "projectionHash": "bcf7e2027c82ba363f3432b067faf4c72d2381b51a71b9f78f6011f513814ac1",
+        "metadata": {
+          "titulo": "Lei Delegada nº 13 de 27/08/1992",
+          "tipo": "Lei Delegada",
+          "numero": "13",
+          "data": "1992-08-27",
+          "ementa": "Institui Gratificações de Atividade para os servidores civis do Poder Executivo, revê vantagens e dá outras providências.",
+          "revogada": false,
+          "versao_texto": "original",
+          "urn": "urn:lex:br:federal:lei.delegada:1992-08-27;13",
+          "fonte": "https://normas.leg.br/?urn=urn:lex:br:federal:lei.delegada:1992-08-27;13",
+          "baixado_em": "2026-10-13",
+          "recuperacao_integralidade": "Estrutura integral de tabelas recuperada da mesma fonte HTML oficial; sequência textual preservada. MD anterior e fonte bruta preservados no histórico recuperacao_ldl_tabelas_20261020_001.",
+          "sha256_md_historico": "1b13657bccc0726e52f438c5653306e11c839600d01af5636d44980683f59af4"
+        },
+        "warnings": []
+      }
+    },
+    {
+      "source_path": "federal/leis-complementares/1962/lcp-1-1962-07-17.md",
+      "blob_sha": "30dfb41f6f48a28d97b258bbd654890734af07ca",
+      "operation": "add",
+      "outcome": "inserted",
+      "source_hash": "663d35c16f5461a7cbb6e13cfae2ccf6addf190d37aa427adb5ef58c9629c229",
+      "source_metadata": {
+        "parserVersion": "la005-v1",
+        "configHash": "a51c727b7719b184d009d72c2625652d974831067a71b38f7189d206ef9b3bda",
+        "projectionHash": "3a25ccb56875066aba2e516639cc9a1ef6ec29dad1f62f2daf4300bf5ab67290",
+        "metadata": {
+          "titulo": "Lei Complementar nº 1 de 17/07/1962",
+          "tipo": "Lei Complementar",
+          "numero": "1",
+          "data": "1962-07-17",
+          "ementa": "Complementa a organização do sistema parlamentar de Govêrno, e  estabelece outras disposições.",
+          "revogada": false,
+          "versao_texto": "texto da fonte oficial",
+          "urn": "urn:lex:br:federal:lei.complementar:1962-07-17;1",
+          "fonte": "https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp01-62.htm",
+          "id_senado": "30812083",
+          "baixado_em": "2026-10-15"
+        },
+        "warnings": []
+      }
+    },
+    {
+      "source_path": "federal/leis-constitucionais/1938/lct-1-1938-05-16.md",
+      "blob_sha": "f68a83e284e948de3be1e13976a2eb4805c9fb77",
+      "operation": "add",
+      "outcome": "inserted",
+      "source_hash": "6323224cb3ef88b759431f15cc7a701d1ff04c016d88b1d3bae460fe69135e8c",
+      "source_metadata": {
+        "parserVersion": "la005-v1",
+        "configHash": "a51c727b7719b184d009d72c2625652d974831067a71b38f7189d206ef9b3bda",
+        "projectionHash": "9cc52b0ead4d8571bbf4552d88297b69f33fcdebc8d00d7fdb3ef0d0d750f694",
+        "metadata": {
+          "titulo": "Lei Constitucional nº 1 de 16/05/1938",
+          "tipo": "Lei Constitucional",
+          "numero": "1",
+          "data": "1938-05-16",
+          "ementa": "EMENDA O ARTIGO 122, NUMERO 12, DA CONSTITUIÇÃO.",
+          "revogada": false,
+          "versao_texto": "texto da fonte oficial",
+          "urn": "urn:lex:br:federal:lei.constitucional:1938-05-16;1",
+          "fonte": "https://www.planalto.gov.br/ccivil_03/LEIS/LCT/LCT001.htm",
+          "id_senado": "572913",
+          "baixado_em": "2026-10-15",
+          "fonte_indice": "https://www.planalto.gov.br/ccivil_03/LEIS/LCT/Quadro_Lct.htm"
+        },
+        "warnings": []
+      }
+    },
+    {
+      "source_path": "federal/decretos-lei/1937/del-1-1937-11-12.md",
+      "blob_sha": "3206ddc5364f799cf2fe474ee7d141976e9004a9",
+      "operation": "add",
+      "outcome": "inserted",
+      "source_hash": "b13c03b34424f6a1460831a878cd6c0a1b5573b95a29207a80370fbc86065d4c",
+      "source_metadata": {
+        "parserVersion": "la005-v1",
+        "configHash": "a51c727b7719b184d009d72c2625652d974831067a71b38f7189d206ef9b3bda",
+        "projectionHash": "543826379310a88439dc2975810280b2c062bd3b4cabfbc9f6059e095c4d262c",
+        "metadata": {
+          "titulo": "Decreto-Lei nº 1 de 12/11/1937",
+          "tipo": "Decreto-Lei",
+          "numero": "1",
+          "data": "1937-11-12",
+          "ementa": "Dispõe sobre a entrega de apólices do Reajustamento Econômico.",
+          "revogada": false,
+          "versao_texto": "republicação/retificação",
+          "urn": "urn:lex:br:federal:decreto.lei:1937-11-12;1",
+          "fonte": "https://normas.leg.br/?urn=urn:lex:br:federal:decreto.lei:1937-11-12;1",
+          "baixado_em": "2026-10-13"
+        },
+        "warnings": []
+      }
+    },
+    {
+      "source_path": "federal/emendas-constitucionais/1969/emc-1-1969-10-17.md",
+      "blob_sha": "e9e6ff1e64a597cc8fe7f2fbb1c48948d63a4ba6",
+      "operation": "add",
+      "outcome": "inserted",
+      "source_hash": "7bc54d0d866ec2fa33722ef8c325525f447d655e53896cc788f913ba2927189a",
+      "source_metadata": {
+        "parserVersion": "la005-v1",
+        "configHash": "a51c727b7719b184d009d72c2625652d974831067a71b38f7189d206ef9b3bda",
+        "projectionHash": "bbd63572ca0c15e698e17b3d9d70bde4a5bffa9e7007f22d4944e7653510c379",
+        "metadata": {
+          "titulo": "Emenda Constitucional nº 1 de 17/10/1969",
+          "tipo": "Emenda Constitucional",
+          "numero": "1",
+          "data": "1969-10-17",
+          "ementa": "Edita o novo texto da Constituição Federal de 24 de janeiro de 1967.",
+          "revogada": false,
+          "versao_texto": "original",
+          "urn": "urn:lex:br:federal:emenda.constitucional:1969-10-17;1",
+          "fonte": "https://normas.leg.br/?urn=urn:lex:br:federal:emenda.constitucional:1969-10-17;1",
+          "baixado_em": "2026-10-15"
+        },
+        "warnings": []
+      }
+    },
+    {
+      "source_path": "federal/decretos-nao-numerados/1891/dec-sn-1891-11-04-s0.md",
+      "blob_sha": "14fbe8734ebd3c04c01c9252011d802cb6e1c840",
+      "operation": "add",
+      "outcome": "inserted",
+      "source_hash": "10ae650dadc3cddf50eb1eea997c4fd2f56536f6f5e8509c6747f8ead8a60c81",
+      "source_metadata": {
+        "parserVersion": "la005-v1",
+        "configHash": "a51c727b7719b184d009d72c2625652d974831067a71b38f7189d206ef9b3bda",
+        "projectionHash": "54f0fb2a99770fcc6bf1f79712fba955d5f0dd23fa7deac6b4d0443586e19860",
+        "metadata": {
+          "titulo": "Decreto  de 04/11/1891",
+          "tipo": "Decreto (não numerado)",
+          "numero": "",
+          "data": "1891-11-04",
+          "ementa": "ISENTA DE DIREITOS DE CONSUMO E DE EXPEDIENTE O GADO VACUM E LANIGERO E DÁ OUTRAS PROVIDÊNCIAS.",
+          "revogada": true,
+          "versao_texto": "original",
+          "urn": "urn:lex:br:federal:decreto:1891-11-04;seq-sf-0",
+          "fonte": "https://normas.leg.br/?urn=urn:lex:br:federal:decreto:1891-11-04;seq-sf-0",
+          "baixado_em": "2026-10-15"
+        },
+        "warnings": []
+      }
+    },
+    {
+      "source_path": "federal/resolucoes-senado/1937/rsf-1-1937-02-22.md",
+      "blob_sha": "6baba07b6f8bce57994305cba362249852132d03",
+      "operation": "add",
+      "outcome": "inserted",
+      "source_hash": "87d9708daa04ccf6ac4c53cc018c73853e181540e23e77b13002518fdb0dc483",
+      "source_metadata": {
+        "parserVersion": "la005-v1",
+        "configHash": "a51c727b7719b184d009d72c2625652d974831067a71b38f7189d206ef9b3bda",
+        "projectionHash": "d810bde369480598d6bd9a76b8eef1316ddc5a0f20112b89bf4b5876a5c4e7f9",
+        "metadata": {
+          "titulo": "Resolução nº 1, de 1937",
+          "tipo": "Resolução do Senado Federal",
+          "numero": "1",
+          "data": "1937-02-22",
+          "ementa": "Suspende a cobrança do imposto de 0,5% sobre as vendas a termo, regulamentado pelo decreto n. 10, de 20 de abril de 1936, do Estado de Pernambuco, e o imposto sôbre operações a têrmo, regulamentado pelo decreto federal n. 17.537, de 10 de novembro de 1931, quanto ao café e ao açúcar a $100 por saco",
+          "situacao": "Não consta revogação expressa",
+          "revogada": false,
+          "versao_texto": "original",
+          "fonte": "https://www2.camara.leg.br/legin/fed/ressen/1930-1939/resolucao-1-22-fevereiro-1937-555448-publicacaooriginal-74681-pl.html",
+          "url_metadados": "https://www2.camara.leg.br/legin/fed/ressen/1930-1939/resolucao-1-22-fevereiro-1937-555448-norma-pl.html",
+          "baixado_em": "2026-10-15",
+          "urn": "urn:lex:br:senado.federal:resolucao:1937-02-22;1"
+        },
+        "warnings": []
+      }
+    },
+    {
+      "source_path": "federal/resolucoes-congresso/1951/rcn-1-1951-04-20.md",
+      "blob_sha": "355dc26bf2c01a101f6b6f67e081601673824ddd",
+      "operation": "add",
+      "outcome": "inserted",
+      "source_hash": "fe0c835575c235c1b4fd4dfc8cb4bbf5a96199ca6a1c5a288a4d9f8989c8516c",
+      "source_metadata": {
+        "parserVersion": "la005-v1",
+        "configHash": "a51c727b7719b184d009d72c2625652d974831067a71b38f7189d206ef9b3bda",
+        "projectionHash": "055b00cd1d55c760051ad565041d51cd5af850cee74c1ad3bcb03cb264452c29",
+        "metadata": {
+          "titulo": "Resolução nº 1, de 1951-CN",
+          "tipo": "Resolução do Congresso Nacional",
+          "numero": "1",
+          "data": "1951-04-20",
+          "ementa": "Aprova o Regimento Comum.",
+          "situacao": "Não consta revogação expressa",
+          "revogada": false,
+          "versao_texto": "original",
+          "fonte": "https://www2.camara.leg.br/legin/fed/rescon/1950-1959/resolucao-1-20-abril-1951-497932-publicacaooriginal-1-pl.html",
+          "url_metadados": "https://www2.camara.leg.br/legin/fed/rescon/1950-1959/resolucao-1-20-abril-1951-497932-norma-pl.html",
+          "baixado_em": "2026-10-15",
+          "urn": "urn:lex:br:congresso.nacional:resolucao:1951-04-20;1"
+        },
+        "warnings": []
+      }
+    }
+  ]
+}

@@ -75,6 +75,8 @@ export interface Entry {
 	size: number;
 }
 export interface Snapshot {
+	/** False for bounded samples, which must never be applied to a database. */
+	inventoryComplete?: boolean;
 	commit: string;
 	inventory(commit: string): Promise<Entry[]>;
 	read(entry: Entry): Promise<Buffer>;

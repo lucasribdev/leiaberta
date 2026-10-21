@@ -1,8 +1,66 @@
 # LeiAberta — Análise da ingestão
 
-**Status:** LA-005 implementada e validada com fixtures sintéticas e Supabase local; análise LA-003 e fundação LA-004 preservadas abaixo.
+**Status:** LA-005 validada também com amostra real limitada (15 documentos, 13 coleções), exclusivamente em dry-run; validações históricas LA-003/004/005 preservadas abaixo.
 **Data:** 21/10/2026.  
 **Escopo:** LA-005 (importador local), LA-004 (schema incremental) e LA-003 (análise histórica). Nenhuma carga real ou acesso ao Supabase remoto.
+
+## LA-005 — Validação real limitada antes da primeira carga (21/10/2026)
+
+**Resultado:** 15 documentos, **923.352 bytes de texto-fonte** adquiridos, 15 inserções prospectivas, zero falhas, conflitos, exclusões, remoções ou atualizações. `dryRun: true`, `inventoryComplete: false`, `checkpointAdvanced: false`, `base: null`. Não houve conexão com banco, nem mesmo local. O [relatório JSON](ingestion-sample-report.json) registra contadores e diagnóstico por caminho, blob Git, SHA-256, metadados, warnings e hashes de parser/configuração/projeção. `inserted` significa somente resultado previsto em catálogo vazio.
+
+### Aquisição e fronteira da amostra
+
+A referência `main` foi resolvida com sucesso uma única vez pela referência Git do GitHub para **`15eb09b618ff08a38c4dfee06a91bd139d093f5d`**. Todas as consultas seguintes usaram esse commit e os SHAs de suas árvores. Uma tentativa anterior no endpoint detalhado de commits foi interrompida pelo teto de 200 KB, sem resultado utilizável; a resolução efetiva usou `/git/ref/heads/main` (limite 16 KiB). Não houve re-resolução posterior. O commit coincide com o snapshot da análise LA-003; esta validação acrescenta execução real do importador, não demonstra evolução temporal do acervo.
+
+A seleção foi intencional, partindo dos casos documentados na LA-003 e de listagens limitadas de diretórios das outras sete coleções. Adquiriram-se apenas os 15 Markdown abaixo. Não houve clone/fetch Git do acervo, inventário recursivo nacional, aquisição de anexos, execução de Python da fonte ou acesso às URLs oficiais/auxiliares do YAML.
+
+O novo `--sample-path` aceita de 1 a 20 caminhos únicos no recorte. Consulta árvores Git **não recursivas**, com cache por SHA, apenas nos ancestrais necessários, e baixa os bytes de `raw.githubusercontent.com` com commit fixado. As árvores precisam declarar `truncated: false`. Verifica modo `100644`, tamanho e SHA-1 Git dos bytes; calcula SHA-256 antes do parsing. Respostas de árvores e documentos têm teto de 2 MiB, referência de 16 KiB, prazo de 30 s por requisição, sem redirects ou retries. Para até 20 caminhos de quatro componentes, são no máximo 35 árvores distintas (raiz, federal, até 13 coleções e até 20 pares coleção/ano) e 20 downloads de documentos. Listar irmãos numa árvore não significa adquirir seus blobs ou provar cobertura completa.
+
+O modo limitado rejeita `--write`, `--resume` e `--artifacts` antes de qualquer conexão. O runner também rejeita banco/retomada/arquivo de artefatos quando recebe snapshot amostral, antes de acessar qualquer método do banco. O relatório permanece incompleto mesmo com todos os documentos selecionados aprovados. Nenhuma ausência pode produzir remoção ou checkpoint. O dry-run não arquiva dados operacionais; as cópias públicas abaixo foram preservadas separadamente como fixtures de teste.
+
+Exemplo de aquisição de dois documentos (repetir `--sample-path` para os demais caminhos do manifesto, até 20):
+
+```bash
+npm run ingest -- --ref 15eb09b618ff08a38c4dfee06a91bd139d093f5d --dry-run \
+  --sample-path federal/leis-ordinarias/1822/lei-sn-1822-10-14-s2.md \
+  --sample-path federal/leis-ordinarias/1891/lei-14-a-1891-10-16.md
+```
+
+### Documentos examinados e achados
+
+Todos os caminhos nesta tabela têm prefixo `federal/`. Os bytes originais estão em [tests/ingestion/public](../tests/ingestion/public/README.md). O [manifesto](../tests/ingestion/public/manifest.json) registra **caminho, commit, SHA-256, blob SHA-1 e tamanho para cada fixture**, sem normalização dos originais.
+
+| Fixture | Caminho após `federal/` | Caso observado (todos aprovados) |
+| --- | --- | --- |
+| 01 | `leis-ordinarias/2002/lei-10406-2002-01-10.md` | Código Civil, 678.720 bytes, versão compilada, Markdown extenso. |
+| 02 | `leis-ordinarias/1822/lei-sn-1822-10-14-s2.md` | Número vazio → NULL, URN `seq-sf-2`, grafia histórica. |
+| 03 | `leis-ordinarias/1891/lei-14-a-1891-10-16.md` | Complemento `14-A`, URN `14-a`. |
+| 04 | `medidas-provisorias/1996/mpv-1463-2-1996-06-28.md` | Reedição `1463-2`, situação `Reeditada`, fonte Câmara. |
+| 05 | `decretos-legislativos/1821/dpl-sn-1821-05-26.md` | Número vazio e URN ausente; identidade inicial pelo namespace/caminho. |
+| 06 | `decretos/1945/dec-20051-1945-11-28.md` | `revogada: null`, string JSON `["NotInForce"]` e metadados auxiliares preservados. |
+| 07 | `resolucoes-camara/1921/rcd-5-1921-11-18-611915.md` | URN ausente, ID no arquivo e ausência declarada de revogação expressa. |
+| 08 | `leis-delegadas/1992/ldl-13-1992-08-27.md` | Tabela HTML com `colspan` preservada como texto. |
+| 09 | `leis-complementares/1962/lcp-1-1962-07-17.md` | Tipo/URN específicos, texto original. |
+| 10 | `leis-constitucionais/1938/lct-1-1938-05-16.md` | Série constitucional histórica com tipo LexML próprio. |
+| 11 | `decretos-lei/1937/del-1-1937-11-12.md` | Tipo Decreto-Lei, URN `decreto.lei`. |
+| 12 | `emendas-constitucionais/1969/emc-1-1969-10-17.md` | Texto de 166.496 bytes, tipo `emenda.constitucional`. |
+| 13 | `decretos-nao-numerados/1891/dec-sn-1891-11-04-s0.md` | Número vazio, `seq-sf-0`, `revogada: true`. |
+| 14 | `resolucoes-senado/1937/rsf-1-1937-02-22.md` | Autoridade `senado.federal`. |
+| 15 | `resolucoes-congresso/1951/rcn-1-1951-04-20.md` | Autoridade `congresso.nacional`. |
+
+Conferidos parsing UTF-8/YAML e parsing em worker, hash dos bytes completos, tamanho/blob Git, tipo, ano/data, epígrafe e URN quando presente, número textual/NULL, separação entre data do ato e publicação, corpo preservado e metadados completos. Não há chaves desconhecidas nessa amostra: os 15 itens têm `warnings: []`. O comportamento para chave nova foi verificado com derivação sintética de uma fixture real: preserva objeto aninhado e emite `unknown_metadata:novo_campo`. Não se apresenta essa mutação como documento encontrado na fonte.
+
+**Rejeições:** nenhuma nos 15 originais; portanto não foi identificado problema da fonte ou regra de parsing excessivamente restritiva nessa seleção, e nenhuma validação foi relaxada. Uma alteração sintética apenas no número da Lei 14-A produz `identity_title`, conserva SHA-256 do documento rejeitado e não avança checkpoint. Testes de aquisição também rejeitam bytes com mesmo tamanho/hash divergente, excesso de tamanho, árvore truncada, modos executável/symlink/submódulo e seleção inválida. O problema concreto encontrado na inspeção foi operacional: o fetch integral e o indicador de inventário completo existentes eram incompatíveis com uma amostra. A correção está restrita ao caminho amostral; parser/configuração continuam `la005-v1` e o mesmo hash do relatório.
+
+URN validada é usada como identidade inicial; sem URN, o código usa `ctresb/leis:path:<caminho>`. Não houve colisão interna detectada. O relatório dry-run não demonstra resolução contra leis já persistidas nem estabilidade de UUID no banco. `revogada`, `Reeditada`, `NotInForce` e “texto vigente” continuam alegações de metadados: não houve afirmação ou verificação de vigência.
+
+### Verificação e recomendação para a primeira carga
+
+Executados nesta validação: `npm run lint`, `npm run typecheck` e `npm test` (inclui os testes de ingestão). As fixtures públicas e os mocks HTTP tornam a suíte normal determinística e independente da rede. A repetição local do dry-run dos 15 documentos produz relatório idêntico. Os testes bloqueiam escrita em snapshot amostral antes de acessar o banco. Nenhum teste de banco, migration, reset, push, deploy, criação de credenciais ou alteração de permissões foi executado nesta etapa; os resultados de integração SQL descritos abaixo são históricos.
+
+**Recomendação:** a amostra aprova a compatibilidade desses 15 documentos com o parser atual; não aprova automaticamente a primeira carga integral. Antes da carga, planejar separadamente o inventário completo e seu dry-run revisado, dimensionar tempo/disco/memória e quota Git, investigar todas as rejeições/conflitos encontrados e confirmar as condições operacionais de escrita já documentadas. O fetch integral original permanece sem quota total de disco e não foi exercitado aqui. Não usar `--sample-path` como base de checkpoint ou prova de ausência/remoção.
+
+Continuam pendentes: cobertura do restante do corpus e variantes como emenda de revisão, metadados desconhecidos reais, documentos malformados reais, colisões/renomes entre documentos fora da seleção, comportamento com base persistida, escala e falhas reais de rede/disco/interrupção. A API pública pode impor rate limit; não há autenticação nova nem fallback para clone integral. Não se verificaram publicações oficiais, integralidade jurídica, disponibilidade das URLs declaradas ou vigência, nem se implementou LA-006.
 
 ## LA-005 — Importador local (21/10/2026)
 
@@ -26,9 +84,9 @@ npm run ingest -- --ref COMMIT --write --artifacts .ingestion/artifacts
 npm run ingest -- --ref COMMIT --write --artifacts .ingestion/artifacts --resume UUID
 ```
 
-`COMMIT` representa o SHA de 40 caracteres retornado pelo relatório; `main` é o padrão quando `--ref` falta. O runner faz um único fetch da referência solicitada em repositório bare temporário, resolve `FETCH_HEAD^{commit}` uma vez e usa apenas esse commit/blobs imutáveis. Não faz checkout, inicializa submódulos, executa scripts/hooks da fonte ou consulta URLs do YAML. O diretório temporário é removido no encerramento normal. Retomar com `main` depois de a branch mudar é rejeitado: usar o commit original.
+`COMMIT` representa o SHA de 40 caracteres retornado pelo relatório; `main` é o padrão quando `--ref` falta. No modo integral, o runner faz um único fetch da referência solicitada em repositório bare temporário, resolve `FETCH_HEAD^{commit}` uma vez e usa apenas esse commit/blobs imutáveis. Não faz checkout, inicializa submódulos, executa scripts/hooks da fonte ou consulta URLs do YAML. O diretório temporário é removido no encerramento normal. Retomar com `main` depois de a branch mudar é rejeitado: usar o commit original.
 
-**Dry-run:** nenhuma escrita/conexão no banco, nenhuma criação de credencial e nenhum arquivo de artefato persistente. A aquisição Git usa disco temporário. Como não consulta o banco, `inserted` significa inserção prospectiva no catálogo vazio; não simula colisões com leis já existentes no banco. Detecta colisões entre os próprios documentos da amostra. Em escrita, os mesmos contadores representam resultados transacionais efetivamente persistidos. Não executar dry-run do acervo inteiro como teste rápido: o fetch obtém os objetos do snapshot completo, ainda que só leia os blobs de normas aprovadas.
+**Dry-run:** nenhuma escrita/conexão no banco, nenhuma criação de credencial e nenhum arquivo de artefato persistente. A aquisição Git usa disco temporário. Como não consulta o banco, `inserted` significa inserção prospectiva no catálogo vazio; não simula colisões com leis já existentes no banco. Detecta colisões entre os próprios documentos da amostra. Em escrita, os mesmos contadores representam resultados transacionais efetivamente persistidos. Não executar dry-run do acervo inteiro como teste rápido: no modo integral, o fetch obtém os objetos do snapshot completo, ainda que só leia os blobs de normas aprovadas. Para validação limitada, usar `--sample-path` conforme descrito acima.
 
 **Escrita local:** exige simultaneamente `--write`, `--artifacts` e `INGESTION_DATABASE_URL`. Aceita somente URI PostgreSQL com IP literal `127.0.0.1` ou `[::1]`, porta `54322`, banco `postgres`, sem parâmetros de conexão; bloqueia hosts remotos, DNS, portas alternativas e usuários de API. Não lê `.env*` automaticamente. Executa `SET ROLE law_ingestor` e todas as consultas de ingestão usam esse papel. A identidade de conexão precisa já estar autorizada a assumir o papel; o runner não cria logins/senhas, não concede memberships e não usa `service_role`. Sem autorização preexistente, a escrita falha fechada. Esta entrega não provisiona o runner nem habilita banco remoto.
 
@@ -69,7 +127,7 @@ npm run lint:db
 npm run build
 ```
 
-Fixtures em `tests/ingestion/` são inteiramente sintéticas, geradas de maneira determinística, sem rede ou documentos públicos copiados. O teste Git cria commits locais com autor/data fixos e verifica blobs/hashes. O launcher de integração captura `DB_URL` de `supabase status --output json` local somente em memória e injeta a conexão por ambiente no processo de teste, sem imprimir segredos. É possível fornecer `INGESTION_TEST_DATABASE_URL` por ambiente seguro, sujeita à mesma restrição local; não há credencial padrão no código. Exige banco operacional de teste sem execuções prévias. Abre transação externa, concede SET ROLE ao `postgres` local apenas nessa transação, executa o runner sob `law_ingestor`, usa savepoints nas unidades transacionais e reverte tudo no fim. Não testa provisionamento de login dedicado nem persistência após COMMIT do harness; testa SQL, constraints/RLS, atomicidade das unidades e retomada com permissões reais.
+As fixtures da implementação original em `tests/ingestion/fixtures.ts` são sintéticas e determinísticas, sem rede. A validação posterior adicionou os documentos públicos fixados em `tests/ingestion/public/`, descritos acima. O teste Git cria commits locais com autor/data fixos e verifica blobs/hashes. O launcher de integração captura `DB_URL` de `supabase status --output json` local somente em memória e injeta a conexão por ambiente no processo de teste, sem imprimir segredos. É possível fornecer `INGESTION_TEST_DATABASE_URL` por ambiente seguro, sujeita à mesma restrição local; não há credencial padrão no código. Exige banco operacional de teste sem execuções prévias. Abre transação externa, concede SET ROLE ao `postgres` local apenas nessa transação, executa o runner sob `law_ingestor`, usa savepoints nas unidades transacionais e reverte tudo no fim. Não testa provisionamento de login dedicado nem persistência após COMMIT do harness; testa SQL, constraints/RLS, atomicidade das unidades e retomada com permissões reais.
 
 Resultados efetivamente verificados: lint e TypeScript passaram; testes Node existentes e novos passaram; integração PostgreSQL passou (13 cenários, incluindo regressão de relógio; a correção de ordenação foi também repetida três vezes sem falhas); pgTAP passou com **105 verificações**; lint SQL de `public,ingestion_private` sem erros; build cliente/SSR passou (código 0). O build repetiu o erro ambiental de log do Wrangler em home somente leitura e aviso de sourcemap CSS já documentados na LA-004. Nenhum deles bloqueou o build. Não houve reset, push, deploy, carga real, credenciais novas ou acesso remoto.
 
@@ -77,7 +135,7 @@ A cobertura inclui parsing/hash/escopo, número ausente/complementos, metadados 
 
 ### Limitações e próximos passos operacionais
 
-Não foi adquirido nem ingerido o repositório vivo nesta tarefa: aquisição remota e compatibilidade integral com todo o acervo permanecem pendentes de dry-run revisado em operação separada. As allowlists de hosts/tipos/URNs são deliberadamente estritas; variantes novas exigem revisão/versionamento. Não existe comando automático para aprovar conflitos, reabrir caminhos históricos ou fundir normas. Uma falha que desapareceu da fonte pode bloquear o cursor até haver decisão auditável; não contornar isso alterando dados manualmente.
+Na implementação original abaixo não foi adquirido nem ingerido o repositório vivo. A validação amostral posterior está registrada acima; compatibilidade integral com todo o acervo permanece pendente de dry-run revisado em operação separada. As allowlists de hosts/tipos/URNs são deliberadamente estritas; variantes novas exigem revisão/versionamento. Não existe comando automático para aprovar conflitos, reabrir caminhos históricos ou fundir normas. Uma falha que desapareceu da fonte pode bloquear o cursor até haver decisão auditável; não contornar isso alterando dados manualmente.
 
 Este runner local serializa aplicações e materializa inventário/projeções/relatório em memória; não foi medido para carga nacional e não oferece paralelismo, streaming de relatórios ou retomada de transferência Git. O fetch inicial traz o snapshot inteiro, limitado por tempo/saída dos comandos; não há quota total de disco Git. Retenção, backup e verificação periódica dos artefatos privados ficam a cargo do operador; diretório e relatórios devem ficar fora do Git (por padrão `.ingestion/` está ignorado). Não foi testada interrupção por perda real de rede/energia ou disco cheio; as falhas e interrupções sintéticas cobrem a lógica de recuperação. Antes de carga real, revisar o dry-run, dimensionar recursos e provisionar separadamente o acesso dedicado; nenhuma dessas operações foi executada nesta entrega.
 

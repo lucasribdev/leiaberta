@@ -1,0 +1,122 @@
+[
+  {
+    "file": "01.md",
+    "path": "federal/leis-ordinarias/2002/lei-10406-2002-01-10.md",
+    "commit": "15eb09b618ff08a38c4dfee06a91bd139d093f5d",
+    "blob": "ec3525c73379fa7b7de3c9e0876357c7aaef5180",
+    "size": 678720,
+    "sha256": "be0cd7d8a1eaacb21cb64f07086929db91f43ad3149b3c721cd33873d328c32c"
+  },
+  {
+    "file": "02.md",
+    "path": "federal/leis-ordinarias/1822/lei-sn-1822-10-14-s2.md",
+    "commit": "15eb09b618ff08a38c4dfee06a91bd139d093f5d",
+    "blob": "aab2125936a83ef34e03d705da8d1b2df1385fd2",
+    "size": 5006,
+    "sha256": "dfce6a25280068d8d1a80d9df22f285b785d760446a3b1f0b3ba65514c1bff86"
+  },
+  {
+    "file": "03.md",
+    "path": "federal/leis-ordinarias/1891/lei-14-a-1891-10-16.md",
+    "commit": "15eb09b618ff08a38c4dfee06a91bd139d093f5d",
+    "blob": "07d40476ae268b7071d4e0fa6d42f41793844118",
+    "size": 1350,
+    "sha256": "fc57fc891d045b663c26680861a9ce7dcf2c731e34831b4e6cabdfc1255871f1"
+  },
+  {
+    "file": "04.md",
+    "path": "federal/medidas-provisorias/1996/mpv-1463-2-1996-06-28.md",
+    "commit": "15eb09b618ff08a38c4dfee06a91bd139d093f5d",
+    "blob": "e2b11bad5af92fd0fb25c165e4b49f5cef4103d5",
+    "size": 4355,
+    "sha256": "4e880e0e68d97863cdd8fdcbfe222b7b6cf28af0f82719b059bff8ad1201b82d"
+  },
+  {
+    "file": "05.md",
+    "path": "federal/decretos-legislativos/1821/dpl-sn-1821-05-26.md",
+    "commit": "15eb09b618ff08a38c4dfee06a91bd139d093f5d",
+    "blob": "dd99c01168a0f89bb3a43d356efbb4abf1168e18",
+    "size": 2627,
+    "sha256": "4820ebc56f195a701d3d4f14adb860b72bc5c206a06b3a0ab9d80da1d370bebf"
+  },
+  {
+    "file": "06.md",
+    "path": "federal/decretos/1945/dec-20051-1945-11-28.md",
+    "commit": "15eb09b618ff08a38c4dfee06a91bd139d093f5d",
+    "blob": "cf4adeec9c5f10dd840fdf2efa5f7baa9c7ff6e9",
+    "size": 1623,
+    "sha256": "4f0edb6825829c7efa0dcaddaa0fac2fe6b38c2def46c2ebda303be59833e63d"
+  },
+  {
+    "file": "07.md",
+    "path": "federal/resolucoes-camara/1921/rcd-5-1921-11-18-611915.md",
+    "commit": "15eb09b618ff08a38c4dfee06a91bd139d093f5d",
+    "blob": "95204a833abffff043789dbf4ab17fd81aeee7bd",
+    "size": 1863,
+    "sha256": "512c2dc94dcfb90e5a563bc33335eab13678a3da2ad15baf6937b0fccd543304"
+  },
+  {
+    "file": "08.md",
+    "path": "federal/leis-delegadas/1992/ldl-13-1992-08-27.md",
+    "commit": "15eb09b618ff08a38c4dfee06a91bd139d093f5d",
+    "blob": "820b59309b8e731b0781ee05089dc2e8f4712561",
+    "size": 12847,
+    "sha256": "3966320f676c3fcdfd03da64906cc046b5c258a77641091fb39008147e38fbed"
+  },
+  {
+    "file": "09.md",
+    "path": "federal/leis-complementares/1962/lcp-1-1962-07-17.md",
+    "commit": "15eb09b618ff08a38c4dfee06a91bd139d093f5d",
+    "blob": "30dfb41f6f48a28d97b258bbd654890734af07ca",
+    "size": 18419,
+    "sha256": "663d35c16f5461a7cbb6e13cfae2ccf6addf190d37aa427adb5ef58c9629c229"
+  },
+  {
+    "file": "10.md",
+    "path": "federal/leis-constitucionais/1938/lct-1-1938-05-16.md",
+    "commit": "15eb09b618ff08a38c4dfee06a91bd139d093f5d",
+    "blob": "f68a83e284e948de3be1e13976a2eb4805c9fb77",
+    "size": 2756,
+    "sha256": "6323224cb3ef88b759431f15cc7a701d1ff04c016d88b1d3bae460fe69135e8c"
+  },
+  {
+    "file": "11.md",
+    "path": "federal/decretos-lei/1937/del-1-1937-11-12.md",
+    "commit": "15eb09b618ff08a38c4dfee06a91bd139d093f5d",
+    "blob": "3206ddc5364f799cf2fe474ee7d141976e9004a9",
+    "size": 1443,
+    "sha256": "b13c03b34424f6a1460831a878cd6c0a1b5573b95a29207a80370fbc86065d4c"
+  },
+  {
+    "file": "12.md",
+    "path": "federal/emendas-constitucionais/1969/emc-1-1969-10-17.md",
+    "commit": "15eb09b618ff08a38c4dfee06a91bd139d093f5d",
+    "blob": "e9e6ff1e64a597cc8fe7f2fbb1c48948d63a4ba6",
+    "size": 166496,
+    "sha256": "7bc54d0d866ec2fa33722ef8c325525f447d655e53896cc788f913ba2927189a"
+  },
+  {
+    "file": "13.md",
+    "path": "federal/decretos-nao-numerados/1891/dec-sn-1891-11-04-s0.md",
+    "commit": "15eb09b618ff08a38c4dfee06a91bd139d093f5d",
+    "blob": "14fbe8734ebd3c04c01c9252011d802cb6e1c840",
+    "size": 1812,
+    "sha256": "10ae650dadc3cddf50eb1eea997c4fd2f56536f6f5e8509c6747f8ead8a60c81"
+  },
+  {
+    "file": "14.md",
+    "path": "federal/resolucoes-senado/1937/rsf-1-1937-02-22.md",
+    "commit": "15eb09b618ff08a38c4dfee06a91bd139d093f5d",
+    "blob": "6baba07b6f8bce57994305cba362249852132d03",
+    "size": 2320,
+    "sha256": "87d9708daa04ccf6ac4c53cc018c73853e181540e23e77b13002518fdb0dc483"
+  },
+  {
+    "file": "15.md",
+    "path": "federal/resolucoes-congresso/1951/rcn-1-1951-04-20.md",
+    "commit": "15eb09b618ff08a38c4dfee06a91bd139d093f5d",
+    "blob": "355dc26bf2c01a101f6b6f67e081601673824ddd",
+    "size": 21715,
+    "sha256": "fe0c835575c235c1b4fd4dfc8cb4bbf5a96199ca6a1c5a288a4d9f8989c8516c"
+  }
+]
