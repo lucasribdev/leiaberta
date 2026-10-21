@@ -13,3 +13,6 @@ dist-ssr
 .vinxi
 __unconfig*
 todos.json
+
+# Private ingestion artifacts and reports
+.ingestion/

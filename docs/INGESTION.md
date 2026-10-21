@@ -1,8 +1,85 @@
 # LeiAberta — Análise da ingestão
 
-**Status:** análise LA-003 preservada abaixo; fundação de schema LA-004 implementada e validada localmente (ver seção a seguir).
+**Status:** LA-005 implementada e validada com fixtures sintéticas e Supabase local; análise LA-003 e fundação LA-004 preservadas abaixo.
 **Data:** 21/10/2026.  
-**Escopo:** LA-003 (análise histórica) e LA-004 (schema incremental). Nenhum importador ou carga real implementado; nenhum acesso ao Supabase remoto.
+**Escopo:** LA-005 (importador local), LA-004 (schema incremental) e LA-003 (análise histórica). Nenhuma carga real ou acesso ao Supabase remoto.
+
+## LA-005 — Importador local (21/10/2026)
+
+Implementação em `scripts/import-laws.ts` e `scripts/ingestion/`, sem imports a partir de `src/` e sem handlers HTTP. `pg`, `yaml` e seus tipos são dependências de desenvolvimento do runner Node.js 24+, não do bundle web. A migration incremental `20261021220000_ingestion_ordering.sql` acrescenta sequências privadas de ordenação a runs/items e seus índices/permissões mínimas. As migrations da LA-004 foram preservadas.
+
+### Comandos e contrato operacional
+
+```bash
+npm ci
+npm run ingest -- --help
+# Padrão: inventaria/valida, imprime JSON, não abre conexão PostgreSQL.
+npm run ingest -- --ref COMMIT --dry-run
+# Também é dry-run quando --dry-run é omitido.
+npm run ingest -- --ref COMMIT
+
+# Escrita: somente Supabase local. Executar apenas depois de revisar o dry-run.
+# INGESTION_DATABASE_URL deve ser injetada pelo ambiente seguro do operador;
+# não colocar o valor na linha de comando, em logs ou em VITE_*.
+npm run ingest -- --ref COMMIT --write --artifacts .ingestion/artifacts
+# Retomada exige exatamente commit, base, parser e configuração da execução.
+npm run ingest -- --ref COMMIT --write --artifacts .ingestion/artifacts --resume UUID
+```
+
+`COMMIT` representa o SHA de 40 caracteres retornado pelo relatório; `main` é o padrão quando `--ref` falta. O runner faz um único fetch da referência solicitada em repositório bare temporário, resolve `FETCH_HEAD^{commit}` uma vez e usa apenas esse commit/blobs imutáveis. Não faz checkout, inicializa submódulos, executa scripts/hooks da fonte ou consulta URLs do YAML. O diretório temporário é removido no encerramento normal. Retomar com `main` depois de a branch mudar é rejeitado: usar o commit original.
+
+**Dry-run:** nenhuma escrita/conexão no banco, nenhuma criação de credencial e nenhum arquivo de artefato persistente. A aquisição Git usa disco temporário. Como não consulta o banco, `inserted` significa inserção prospectiva no catálogo vazio; não simula colisões com leis já existentes no banco. Detecta colisões entre os próprios documentos da amostra. Em escrita, os mesmos contadores representam resultados transacionais efetivamente persistidos. Não executar dry-run do acervo inteiro como teste rápido: o fetch obtém os objetos do snapshot completo, ainda que só leia os blobs de normas aprovadas.
+
+**Escrita local:** exige simultaneamente `--write`, `--artifacts` e `INGESTION_DATABASE_URL`. Aceita somente URI PostgreSQL com IP literal `127.0.0.1` ou `[::1]`, porta `54322`, banco `postgres`, sem parâmetros de conexão; bloqueia hosts remotos, DNS, portas alternativas e usuários de API. Não lê `.env*` automaticamente. Executa `SET ROLE law_ingestor` e todas as consultas de ingestão usam esse papel. A identidade de conexão precisa já estar autorizada a assumir o papel; o runner não cria logins/senhas, não concede memberships e não usa `service_role`. Sem autorização preexistente, a escrita falha fechada. Esta entrega não provisiona o runner nem habilita banco remoto.
+
+### Validação, limites e proveniência
+
+- Allowlist explícita das 13 coleções em `model.ts`, conferindo caminho/tipo/autoridade LexML. Constituição, constituições históricas, regimentos, regulamentos, material auxiliar e outras esferas aparecem como `excluded`, com motivo. Novos formatos não entram automaticamente.
+- UTF-8 fatal, SHA-256 dos bytes completos antes de interpretar BOM/CRLF; tamanho e SHA-1 do objeto Git também conferidos. Aceita somente blobs regulares `100644`; symlinks, executáveis e submódulos no recorte falham. Caminhos absolutos, traversal, controles e barras invertidas invalidam o inventário.
+- YAML 1.2 core, chaves únicas, sem tags arbitrárias nem aliases; Zod valida os campos externos. Datas continuam strings e passam por validação de calendário; ano/pasta/data/URN, número textual, tipo, jurisdição, epígrafe e URL oficial são confrontados quando informados. URL oficial exige HTTPS e host exato na allowlist; não é acessada nem certifica vigência.
+- Número ausente/vazio vira NULL; complementos/reedições permanecem texto. Metadados completos, inclusive desconhecidos, permanecem em `laws.source_metadata`; campos novos geram warnings nos itens. Documentos sem texto substancial, avisos de ausência, identidade pendente, U+FFFD, controles ou indícios de mojibake ficam em falha para revisão. Nada é corrigido silenciosamente.
+- Limites: 2 MiB por documento, profundidade 20, zero aliases, parsing em worker isolado com prazo de 5 s e heap de 64 MiB; até 300 mil entradas e saída Git de 96 MiB. Comandos Git têm prazo de 30 s, conexão de 5 s e SQL de 10 s. Concorrência é 1, com lock consultivo PostgreSQL por repositório e índice de execução ativa da LA-004. **Zero retries automáticos**: erro fica durável e a repetição explícita cria nova tentativa, evitando loops e resolução repetida da branch.
+- Cada versão aplicada preserva commit, blob, caminho, permalink GitHub, hash, URL oficial, metadados, datas declaradas e importação. Itens apontam para sua execução/commit e registram hash, operação, diagnóstico, warnings e versões do parser/configuração/projeção. Os bytes lidos são arquivados em arquivos privados por SHA-256 antes de parsear, inclusive quando o parsing falha; `artifact_reference` usa `sha256:HASH`. Arquivos acima do limite não são adquiridos/arquivados, mas a falha conserva blob/commit/caminho para auditoria.
+
+### Identidade, incrementalidade e retomada
+
+A identidade inicial usa URN validada ou `ctresb/leis:path:CAMINHO`. UPDATE usa UUID resolvido e colunas permitidas, nunca DELETE+INSERT. URN descoberta depois pode ser acrescentada sem trocar UUID/source_id. Correção/remoção de URN existente, alteração da identidade do caminho, colisão de URN e reutilização de caminho histórico exigem revisão.
+
+Renome automático é conservador: inventário completo, um único caminho antigo ausente, blob exatamente idêntico, um único destino no recorte e nenhuma identidade conflitante. Essas condições provam a movimentação sem conteúdo alterado; conhecer apenas uma URN ou um blob não basta. Renomes com conteúdo diferente e possíveis duplicatas sem prova ficam em `conflict`, sem fusão. Lei, fechamento/abertura de caminhos e item aplicado são transacionados juntos. Remoção encerra o caminho e marca indisponibilidade, preservando lei, UUID, texto e status jurídico; o caminho antigo de um renome também entra em `removed` no relatório, com motivo `validated_rename`.
+
+O delta usa o inventário completo do commit-alvo e a projeção/histórico duráveis como base aplicada. Não depende de ancestralidade Git ou de árvore recursiva truncada da API; funciona também com histórico reescrito. Blobs já aplicados com parser, configuração e projeção iguais não são lidos/parseados novamente. A decisão de replay verifica blob/hash e os hashes de parser/configuração/projeção; sem mudança, **nenhum UPDATE em laws**: UUID, conteúdo, `imported_at`, `updated_at` e commit da última versão aplicada são preservados. O commit da observação atual fica em `runs`. Alteração da projeção, parser ou configuração força revalidação mesmo com bytes iguais.
+
+Retomada reinventa o snapshot completo, reaproveita os resultados resolvidos da mesma execução e incrementa tentativas de falhas/conflitos, mantendo o histórico imutável. O manifesto de remoções é salvo em `runs.counters.removals` antes de qualquer aplicação, para que interrupção após renome não perca os caminhos antigos. Crash deixa uma execução `running`, retomável com o mesmo UUID; erros capturados encerram como `failed`. Não iniciar outra execução enquanto houver uma `running`.
+
+Pendências anteriores são reconsideradas mesmo em outra execução/commit. Se um caminho falho desaparecer sem lei publicada, ele continua como conflito de revisão; não desaparece da fila só porque saiu do delta. Uma versão posterior válida no mesmo caminho pode resolver falhas anteriores. Inventário incompleto, falha de aquisição/SQL, conflito ou pendência não resolvida impedem checkpoint. Execuções e eventos usam sequências monotônicas privadas, pois timestamps podem regredir; encerramentos usam o maior entre relógio e início para satisfazer as constraints, sem modificar tentativas anteriores. Conclusão da execução e avanço do cursor são uma transação com comparação da base; o trigger da LA-004 continua sendo aplicado. Erro antes de resolver o commit só pode produzir diagnóstico redigido em stderr, pois ainda não existe commit-alvo verificável para registrar em `runs`.
+
+O relatório JSON reconcilia `inventoried = inserted + updated + unchanged + excluded + removed + failed + conflict`. `inventoried` conta caminhos do snapshot, mais caminhos removidos e pendências ausentes que exigem resultado; não significa número de leis. `@inventory` é uma tentativa operacional de controle, fora desses contadores. Falhas e conflitos contêm código/mensagem, sem erros brutos do driver ou strings de conexão. Saída 1 indica falha/conflito. Em dry-run, `checkpointAdvanced` é sempre false.
+
+### Testes e resultados desta entrega
+
+```bash
+npm run db:migrate # somente local; migration incremental, sem reset
+npm run lint
+npm run typecheck
+npm test
+# Obtém a conexão do CLI local em memória, ou usa INGESTION_TEST_DATABASE_URL já injetada.
+npm run test:ingestion:db
+npm run test:db
+npm run lint:db
+npm run build
+```
+
+Fixtures em `tests/ingestion/` são inteiramente sintéticas, geradas de maneira determinística, sem rede ou documentos públicos copiados. O teste Git cria commits locais com autor/data fixos e verifica blobs/hashes. O launcher de integração captura `DB_URL` de `supabase status --output json` local somente em memória e injeta a conexão por ambiente no processo de teste, sem imprimir segredos. É possível fornecer `INGESTION_TEST_DATABASE_URL` por ambiente seguro, sujeita à mesma restrição local; não há credencial padrão no código. Exige banco operacional de teste sem execuções prévias. Abre transação externa, concede SET ROLE ao `postgres` local apenas nessa transação, executa o runner sob `law_ingestor`, usa savepoints nas unidades transacionais e reverte tudo no fim. Não testa provisionamento de login dedicado nem persistência após COMMIT do harness; testa SQL, constraints/RLS, atomicidade das unidades e retomada com permissões reais.
+
+Resultados efetivamente verificados: lint e TypeScript passaram; testes Node existentes e novos passaram; integração PostgreSQL passou (13 cenários, incluindo regressão de relógio; a correção de ordenação foi também repetida três vezes sem falhas); pgTAP passou com **105 verificações**; lint SQL de `public,ingestion_private` sem erros; build cliente/SSR passou (código 0). O build repetiu o erro ambiental de log do Wrangler em home somente leitura e aviso de sourcemap CSS já documentados na LA-004. Nenhum deles bloqueou o build. Não houve reset, push, deploy, carga real, credenciais novas ou acesso remoto.
+
+A cobertura inclui parsing/hash/escopo, número ausente/complementos, metadados desconhecidos, Git fixo e symlinks, artefatos, replay/timestamps, hash e projeção divergentes, parser/configuração, UUID/source_id estáveis e URN tardia, conflitos/renomes/caminho reutilizado, rollback, interrupção e manifesto de retomada, concorrência entre conexões, falhas persistentes/fora do inventário, bloqueio e recuperação de checkpoint e remoções sem exclusão/vigência. Não há votos/comentários implementados para provar preservação de interações concretas; a preservação do UUID e a ausência de DELETE são verificadas.
+
+### Limitações e próximos passos operacionais
+
+Não foi adquirido nem ingerido o repositório vivo nesta tarefa: aquisição remota e compatibilidade integral com todo o acervo permanecem pendentes de dry-run revisado em operação separada. As allowlists de hosts/tipos/URNs são deliberadamente estritas; variantes novas exigem revisão/versionamento. Não existe comando automático para aprovar conflitos, reabrir caminhos históricos ou fundir normas. Uma falha que desapareceu da fonte pode bloquear o cursor até haver decisão auditável; não contornar isso alterando dados manualmente.
+
+Este runner local serializa aplicações e materializa inventário/projeções/relatório em memória; não foi medido para carga nacional e não oferece paralelismo, streaming de relatórios ou retomada de transferência Git. O fetch inicial traz o snapshot inteiro, limitado por tempo/saída dos comandos; não há quota total de disco Git. Retenção, backup e verificação periódica dos artefatos privados ficam a cargo do operador; diretório e relatórios devem ficar fora do Git (por padrão `.ingestion/` está ignorado). Não foi testada interrupção por perda real de rede/energia ou disco cheio; as falhas e interrupções sintéticas cobrem a lógica de recuperação. Antes de carga real, revisar o dry-run, dimensionar recursos e provisionar separadamente o acesso dedicado; nenhuma dessas operações foi executada nesta entrega.
 
 ## LA-004 — Contrato implementado em 21/10/2026
 
@@ -300,4 +377,4 @@ Fixtures públicas pequenas fixadas por commit/hash e fixtures sintéticas malfo
 | Recomendação de migration sem aplicação | Propostas explícitas de colunas, constraints e tabelas, pendentes de aprovação. |
 | Licença e cobertura | LICENSE consultada e limites de amostragem/truncamento declarados. |
 
-Conclusão histórica da LA-003: a análise isolada não concluía LA-004, LA-005 ou LA-001. A implementação e a validação posteriores da LA-004 estão registradas no início deste documento. LA-005 e a auditoria completa da fundação continuam fora desta entrega; revisar o recorte e o dry-run antes de autorizar a primeira carga. O backlog não foi alterado.
+Conclusão histórica da LA-003: a análise isolada não concluía LA-004, LA-005 ou LA-001. A implementação e a validação posteriores da LA-004 estão registradas no início deste documento. Naquela etapa, LA-005 e a auditoria completa da fundação permaneciam pendentes. A implementação posterior da LA-005 está descrita no início deste documento; revisar o dry-run antes de autorizar a primeira carga. O backlog não foi alterado.

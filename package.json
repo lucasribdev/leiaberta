@@ -15,12 +15,15 @@
     "check": "biome check",
     "deploy": "npm run build && wrangler deploy",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-test-module-mocks tests/supabase-env.test.ts && node --experimental-test-module-mocks tests/supabase-clients.test.ts",
+    "test": "node --experimental-test-module-mocks tests/supabase-env.test.ts && node --experimental-test-module-mocks tests/supabase-clients.test.ts && npm run test:ingestion",
     "supabase:start": "supabase start",
     "db:migrate": "supabase migration up --local",
     "db:types": "node scripts/generate-supabase-types.mjs",
     "test:db": "supabase test db",
-    "lint:db": "supabase db lint --local --schema public --fail-on warning"
+    "lint:db": "supabase db lint --local --schema public,ingestion_private --fail-on warning",
+    "ingest": "node scripts/import-laws.ts",
+    "test:ingestion": "node tests/ingestion/parser.test.ts && node tests/ingestion/git.test.ts",
+    "test:ingestion:db": "node scripts/test-ingestion-db.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -45,13 +48,16 @@
     "@tanstack/devtools-vite": "0.8.5",
     "@tanstack/router-cli": "^1.132.0",
     "@types/node": "^22.10.2",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^6.0.1",
+    "pg": "^8.23.1",
     "supabase": "^2.121.0",
     "typescript": "^6.0.2",
     "vite": "^8.0.0",
-    "wrangler": "^4.70.0"
+    "wrangler": "^4.70.0",
+    "yaml": "^2.9.1"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
